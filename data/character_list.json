@@ -1,0 +1,340 @@
+{
+    "groups": [
+        {
+            "id": 0,
+            "name": "Poppin'Party",
+            "id_range": {"start": 1001, "end": 6000},
+            "members": [
+                {
+                    "id": 1,
+                    "name": "Kasumi",
+                    "nickname": "ksm",
+                    "id_range": {"start": 1001, "end": 2000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 2,
+                    "name": "Tae",
+                    "nickname": "tae",
+                    "id_range": {"start": 2001, "end": 3000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 3,
+                    "name": "Rimi",
+                    "nickname": "rimi",
+                    "id_range": {"start": 3001, "end": 4000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 4,
+                    "name": "Saya",
+                    "nickname": "saya",
+                    "id_range": {"start": 4001, "end": 5000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 5,
+                    "name": "Arisa",
+                    "nickname": "ars",
+                    "id_range": {"start": 5001, "end": 6000},
+                    "instruments": ["Keyboard", "キーボード", "键盘"]
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "name": "Afterglow",
+            "id_range": {"start": 6001, "end": 11000},
+            "members": [
+                {
+                    "id": 7,
+                    "name": "Ran",
+                    "nickname": "ran",
+                    "id_range": {"start": 6001, "end": 7000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 8,
+                    "name": "Moca",
+                    "nickname": "moka",
+                    "id_range": {"start": 7001, "end": 8000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 9,
+                    "name": "Himari",
+                    "nickname": "himari",
+                    "id_range": {"start": 8001, "end": 9000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 10,
+                    "name": "Tomoe",
+                    "nickname": "tomoe",
+                    "id_range": {"start": 9001, "end": 10000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 11,
+                    "name": "Tsugumi",
+                    "nickname": "tsg",
+                    "id_range": {"start": 10001, "end": 11000},
+                    "instruments": ["Keyboard", "キーボード", "键盘"]
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "name": "Hello Happy World!",
+            "id_range": {"start": 11001, "end": 16000},
+            "members": [
+                {
+                    "id": 13,
+                    "name": "Kokoro",
+                    "nickname": "kkr",
+                    "id_range": {"start": 11001, "end": 12000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 14,
+                    "name": "Kaoru",
+                    "nickname": "kaoru",
+                    "id_range": {"start": 12001, "end": 13000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 15,
+                    "name": "Hagumi",
+                    "nickname": "hgm",
+                    "id_range": {"start": 13001, "end": 14000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 16,
+                    "name": "Kanon",
+                    "nickname": "kano",
+                    "id_range": {"start": 14001, "end": 15000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 17,
+                    "name": "Misaki",
+                    "nickname": "msk",
+                    "id_range": {"start": 15001, "end": 16000},
+                    "instruments": ["DJ Disc Jockey", "DJディスクジャッジャー", "DJ打碟机"]
+                }
+            ]
+        },
+        {
+            "id": 18,
+            "name": "Pastel＊Palettes",
+            "id_range": {"start": 16001, "end": 21000},
+            "members": [
+                {
+                    "id": 19,
+                    "name": "Aya",
+                    "nickname": "aya",
+                    "id_range": {"start": 16001, "end": 17000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 20,
+                    "name": "Hina",
+                    "nickname": "hina",
+                    "id_range": {"start": 17001, "end": 18000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 21,
+                    "name": "Chisato",
+                    "nickname": "cst",
+                    "id_range": {"start": 18001, "end": 19000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 22,
+                    "name": "Maya",
+                    "nickname": "maya",
+                    "id_range": {"start": 19001, "end": 20000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 23,
+                    "name": "Eve",
+                    "nickname": "eve",
+                    "id_range": {"start": 20001, "end": 21000},
+                    "instruments": ["Keyboard", "キーボード", "键盘"]
+                }
+            ]
+        },
+        {
+            "id": 24,
+            "name": "Roselia",
+            "id_range": {"start": 21001, "end": 26000},
+            "members": [
+                {
+                    "id": 25,
+                    "name": "Yukina",
+                    "nickname": "ykn",
+                    "id_range": {"start": 21001, "end": 22000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 26,
+                    "name": "Sayo",
+                    "nickname": "sayo",
+                    "id_range": {"start": 22001, "end": 23000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 27,
+                    "name": "Lisa",
+                    "nickname": "risa",
+                    "id_range": {"start": 23001, "end": 24000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 28,
+                    "name": "Ako",
+                    "nickname": "ako",
+                    "id_range": {"start": 24001, "end": 25000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 29,
+                    "name": "Rinko",
+                    "nickname": "rinrin",
+                    "id_range": {"start": 25001, "end": 26000},
+                    "instruments": ["Keyboard", "キーボード", "键盘"]
+                }
+            ]
+        },
+        {
+            "id": 30,
+            "name": "Morfonica",
+            "id_range": {"start": 26001, "end": 31000},
+            "members": [
+                {
+                    "id": 31,
+                    "name": "Mashiro",
+                    "nickname": "mashiro",
+                    "id_range": {"start": 26001, "end": 27000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 32,
+                    "name": "Toko",
+                    "nickname": "toko",
+                    "id_range": {"start": 27001, "end": 28000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 33,
+                    "name": "Nanami",
+                    "nickname": "anami",
+                    "id_range": {"start": 28001, "end": 29000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 34,
+                    "name": "Tsukushi",
+                    "nickname": "tsuk",
+                    "id_range": {"start": 29001, "end": 30000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 35,
+                    "name": "Rui",
+                    "nickname": "rui",
+                    "id_range": {"start": 30001, "end": 31000},
+                    "instruments": ["violin", "ヴァイオリン", "小提琴"]
+                }
+            ]
+        },
+        {
+            "id": 36,
+            "name": "RAISE A SUILEN",
+            "id_range": {"start": 31001, "end": 36000},
+            "members": [
+                {
+                    "id": 37,
+                    "name": "Layer",
+                    "nickname": "lay",
+                    "id_range": {"start": 31001, "end": 32000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 38,
+                    "name": "Lock",
+                    "nickname": "lock",
+                    "id_range": {"start": 32001, "end": 33000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 39,
+                    "name": "Masking",
+                    "nickname": "masking",
+                    "id_range": {"start": 33001, "end": 34000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                },
+                {
+                    "id": 40,
+                    "name": "Pareo",
+                    "nickname": "pareo",
+                    "id_range": {"start": 34001, "end": 35000},
+                    "instruments": ["Keyboard", "キーボード", "键盘"]
+                },
+                {
+                    "id": 41,
+                    "name": "Chu²",
+                    "nickname": "chuchu",
+                    "id_range": {"start": 35001, "end": 36000},
+                    "instruments": ["DJ Disc Jockey", "DJディスクジャッジャー", "DJ打碟机"]
+                }
+            ]
+        },
+        {
+            "id": 42,
+            "name": "MyGO!!!!!",
+            "id_range": {"start": 36001, "end": 41000},
+            "members": [
+                {
+                    "id": 43,
+                    "name": "Tomori",
+                    "nickname": "tomorin",
+                    "id_range": {"start": 36001, "end": 37000},
+                    "instruments": ["Vocals", "ボーカル", "主唱"]
+                },
+                {
+                    "id": 44,
+                    "name": "Ano",
+                    "nickname": "ano",
+                    "id_range": {"start": 37001, "end": 38000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 45,
+                    "name": "Rana",
+                    "nickname": "rana",
+                    "id_range": {"start": 38001, "end": 39000},
+                    "instruments": ["Guitar", "ギター", "吉他"]
+                },
+                {
+                    "id": 46,
+                    "name": "Soyo",
+                    "nickname": "soyo",
+                    "id_range": {"start": 39001, "end": 40000},
+                    "instruments": ["Bass", "ベース", "贝斯"]
+                },
+                {
+                    "id": 47,
+                    "name": "Riki",
+                    "nickname": "riki",
+                    "id_range": {"start": 40001, "end": 41000},
+                    "instruments": ["Drums", "ドラム", "鼓"]
+                }
+            ]
+        }
+    ]
+} 
