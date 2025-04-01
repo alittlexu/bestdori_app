@@ -1,3 +1,0 @@
-"""
-Bestdori Card Manager
-"""
