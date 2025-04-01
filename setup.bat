@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 echo 正在安装 BanG Dream! 卡面下载工具...
 echo.
 
@@ -41,6 +42,7 @@ if errorlevel 1 (
 REM 创建启动脚本
 echo 正在创建启动脚本...
 echo @echo off > start.bat
+echo chcp 65001 ^> nul >> start.bat
 echo call venv\Scripts\activate >> start.bat
 echo python src/gui/app.py >> start.bat
 
