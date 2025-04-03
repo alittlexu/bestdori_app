@@ -1,0 +1,32 @@
+{
+    "window": {
+        "size": "800x600",
+        "min_size": [
+            800,
+            600
+        ],
+        "title": "Bestdori 多功能工具"
+    },
+    "theme": {
+        "name": "default",
+        "font_family": "微软雅黑",
+        "font_sizes": {
+            "small": 9,
+            "normal": 10,
+            "large": 12,
+            "title": 16
+        }
+    },
+    "language": "zh_CN",
+    "paths": {
+        "downloads": "",
+        "cache": "",
+        "logs": ""
+    },
+    "download": {
+        "default_speed": 1.0,
+        "max_speed": 5.0,
+        "min_speed": 0.1,
+        "timeout": 10
+    }
+}
