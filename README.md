@@ -23,57 +23,7 @@
 
 ## 部署说明
 
-### 方法1：使用安装脚本（推荐）
 
-1. 下载项目文件：
-   - 访问 https://github.com/alittlexu/bestdori_app
-   - 点击 "Code" -> "Download ZIP"
-   - 解压下载的ZIP文件到任意目录
-
-2. 运行安装脚本：
-   - 双击运行 `setup.bat`
-   - 等待安装完成
-   - 程序会自动启动
-
-### 方法2：手动安装
-
-1. 安装Python环境：
-   - 访问 https://www.python.org/downloads/
-   - 下载并安装Python 3.8或更高版本
-   - 安装时勾选"Add Python to PATH"
-
-2. 安装依赖包：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. 运行程序：
-   ```bash
-   python src/gui/app.py
-   ```
-
-### 方法3：使用虚拟环境（推荐开发者使用）
-
-1. 创建虚拟环境：
-   ```bash
-   python -m venv venv
-   ```
-
-2. 激活虚拟环境：
-   ```bash
-   # Windows
-   venv\Scripts\activate
-   ```
-
-3. 安装依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. 运行程序：
-   ```bash
-   python src/gui/app.py
-   ```
 
 ## 目录结构
 
