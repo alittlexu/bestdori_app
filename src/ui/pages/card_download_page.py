@@ -3,9 +3,10 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                             QGridLayout, QSpinBox, QFileDialog, QMessageBox, QListWidget,
                             QListWidgetItem, QProgressBar, QMenu, QCheckBox, QToolButton,
                             QWidgetAction, QDialog)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPoint
-from PyQt6.QtGui import QAction, QPixmap
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPoint, QEvent
+from PyQt6.QtGui import QAction, QPixmap, QMouseEvent
 from src.utils.database import DatabaseManager
+from src.core.cards.card_downloader import BestdoriDownloader
 import os
 import requests
 from PIL import Image
@@ -102,247 +103,6 @@ ABOUT_TEXT = """
 <p>© dx闹着玩的</p>
 """
 
-class BestdoriDownloader:
-    """Bestdori卡面下载器"""
-    
-    def __init__(self, save_dir=None):
-        self.save_dir = save_dir or os.getcwd()
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
-        self.servers = ['jp', 'en', 'tw', 'cn', 'kr']
-        self.stats = {
-            "complete": 0,     # 完整下载（普通+特训）
-            "normal_only": 0,  # 仅普通版本
-            "trained_only": 0, # 仅特训版本
-            "failed": 0,       # 下载失败
-            "nonexistent": []  # 不存在的ID列表
-        }
-        
-        # 配置日志
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        
-    def check_card_exists(self, card_id):
-        """检查卡片是否存在，并验证图片分辨率"""
-        exists = {'normal': False, 'trained': False}
-        server_used = None
-        
-        # 首先尝试检查normal形态（只检查一次）
-        normal_url = f"https://bestdori.com/assets/jp/characters/resourceset/res{str(card_id).zfill(6)}_rip/card_normal.png"
-        try:
-            response = self.session.head(normal_url, timeout=3)
-            if response.status_code == 200 and ('content-length' not in response.headers or int(response.headers.get('content-length', '0')) > 100):
-                # 获取完整图片内容并检查分辨率
-                response = self.session.get(normal_url, timeout=5)
-                if response.status_code == 200 and len(response.content) > 1024:
-                    try:
-                        img = Image.open(BytesIO(response.content))
-                        width, height = img.size
-                        if width == 1334 and height == 1002:
-                            exists['normal'] = True
-                            server_used = 'jp'
-                            logging.info(f"卡片 {card_id} normal形态卡面验证成功 (分辨率: {width}x{height})")
-                        else:
-                            logging.warning(f"卡片 {card_id} normal形态卡面验证失败 (分辨率: {width}x{height})")
-                    except Exception as e:
-                        logging.warning(f"卡片 {card_id} normal形态卡面验证失败: {str(e)}")
-                else:
-                    logging.debug(f"卡片 {card_id} normal形态卡面验证失败: 状态码 {response.status_code} 或内容长度不足")
-            else:
-                logging.debug(f"卡片 {card_id} normal形态卡面不存在")
-        except Exception as e:
-            logging.debug(f"检查卡片 {card_id} normal形态出错: {str(e)}")
-        
-        # 如果normal形态不存在，检查trained形态（只检查一次）
-        if not exists['normal']:
-            logging.info(f"卡片 {card_id} normal形态不存在，检查trained形态")
-            
-            trained_url = f"https://bestdori.com/assets/jp/characters/resourceset/res{str(card_id).zfill(6)}_rip/card_after_training.png"
-            try:
-                response = self.session.head(trained_url, timeout=3)
-                if response.status_code == 200 and ('content-length' not in response.headers or int(response.headers.get('content-length', '0')) > 100):
-                    response = self.session.get(trained_url, timeout=5)
-                    if response.status_code == 200 and len(response.content) > 1024:
-                        try:
-                            img = Image.open(BytesIO(response.content))
-                            width, height = img.size
-                            if width == 1334 and height == 1002:
-                                exists['trained'] = True
-                                server_used = 'jp'
-                                logging.info(f"卡片 {card_id} trained形态卡面验证成功 (分辨率: {width}x{height})")
-                            else:
-                                logging.warning(f"卡片 {card_id} trained形态卡面验证失败 (分辨率: {width}x{height})")
-                        except Exception as e:
-                            logging.warning(f"卡片 {card_id} trained形态卡面验证失败: {str(e)}")
-                    else:
-                        logging.warning(f"卡片 {card_id} trained形态卡面验证失败: 状态码 {response.status_code} 或内容长度不足")
-                else:
-                    logging.debug(f"卡片 {card_id} trained形态卡面不存在")
-            except Exception as e:
-                logging.debug(f"检查卡片 {card_id} trained形态出错: {str(e)}")
-        else:
-            # 如果normal形态存在，检查trained形态（只检查一次）
-            trained_url = f"https://bestdori.com/assets/jp/characters/resourceset/res{str(card_id).zfill(6)}_rip/card_after_training.png"
-            try:
-                response = self.session.head(trained_url, timeout=3)
-                if response.status_code == 200 and ('content-length' not in response.headers or int(response.headers.get('content-length', '0')) > 100):
-                    response = self.session.get(trained_url, timeout=5)
-                    if response.status_code == 200 and len(response.content) > 1024:
-                        try:
-                            img = Image.open(BytesIO(response.content))
-                            width, height = img.size
-                            if width == 1334 and height == 1002:
-                                exists['trained'] = True
-                                logging.info(f"卡片 {card_id} trained形态卡面验证成功 (分辨率: {width}x{height})")
-                            else:
-                                logging.warning(f"卡片 {card_id} trained形态卡面验证失败 (分辨率: {width}x{height})")
-                        except Exception as e:
-                            logging.warning(f"卡片 {card_id} trained形态卡面验证失败: {str(e)}")
-                    else:
-                        logging.debug(f"卡片 {card_id} trained形态卡面不存在")
-                else:
-                    logging.debug(f"卡片 {card_id} trained形态卡面不存在")
-            except Exception as e:
-                logging.debug(f"检查卡片 {card_id} trained形态出错: {str(e)}")
-        
-        return exists, server_used
-    
-    def download_card(self, card_id, server=None):
-        """下载卡片图片"""
-        result = {'normal': False, 'trained': False}
-        
-        # 如果没有指定服务器，先检查卡片是否存在
-        if not server:
-            exists, server = self.check_card_exists(card_id)
-            if not exists['normal'] and not exists['trained']:
-                logging.info(f"卡片 {card_id} 在所有服务器上都不存在")
-                return result
-        
-        if not server:
-            logging.info(f"卡片 {card_id} 没有找到可用的服务器")
-            return result
-        
-        # 下载普通版本
-        normal_url = f"https://bestdori.com/assets/{server}/characters/resourceset/res{str(card_id).zfill(6)}_rip/card_normal.png"
-        normal_path = os.path.join(self.save_dir, f"{card_id}_normal.png")
-        
-        try:
-            response = self.session.get(normal_url, timeout=10)
-            if response.status_code == 200 and len(response.content) > 1024:
-                try:
-                    # 验证图片分辨率
-                    img = Image.open(BytesIO(response.content))
-                    width, height = img.size
-                    if width == 1334 and height == 1002:
-                        # 分辨率正确，保存图片
-                        with open(normal_path, 'wb') as f:
-                            f.write(response.content)
-                        result['normal'] = True
-                        logging.info(f"卡片 {card_id} normal形态下载成功: {normal_path} (分辨率: {width}x{height})")
-                    else:
-                        logging.warning(f"卡片 {card_id} normal形态分辨率不符 (分辨率: {width}x{height})，跳过下载")
-                except Exception as e:
-                    logging.warning(f"卡片 {card_id} normal形态验证失败: {str(e)}")
-            else:
-                logging.warning(f"卡片 {card_id} normal形态下载失败: 状态码 {response.status_code} 或内容长度不足")
-        except Exception as e:
-            logging.error(f"下载卡片 {card_id} normal形态失败: {str(e)}")
-        
-        # 下载特训版本
-        trained_url = f"https://bestdori.com/assets/{server}/characters/resourceset/res{str(card_id).zfill(6)}_rip/card_after_training.png"
-        trained_path = os.path.join(self.save_dir, f"{card_id}_trained.png")
-        
-        try:
-            response = self.session.get(trained_url, timeout=10)
-            if response.status_code == 200 and len(response.content) > 1024:
-                try:
-                    # 验证图片分辨率
-                    img = Image.open(BytesIO(response.content))
-                    width, height = img.size
-                    if width == 1334 and height == 1002:
-                        # 分辨率正确，保存图片
-                        with open(trained_path, 'wb') as f:
-                            f.write(response.content)
-                        result['trained'] = True
-                        logging.info(f"卡片 {card_id} trained形态下载成功: {trained_path} (分辨率: {width}x{height})")
-                    else:
-                        logging.warning(f"卡片 {card_id} trained形态分辨率不符 (分辨率: {width}x{height})，跳过下载")
-                except Exception as e:
-                    logging.warning(f"卡片 {card_id} trained形态验证失败: {str(e)}")
-            else:
-                logging.warning(f"卡片 {card_id} trained形态下载失败: 状态码 {response.status_code} 或内容长度不足")
-        except Exception as e:
-            logging.error(f"下载卡片 {card_id} trained形态失败: {str(e)}")
-        
-        return result
-        
-    def download_character_cards(self, character_id_start, character_id_end=None, callback=None):
-        """下载指定角色范围的卡片"""
-        if character_id_end is None:
-            character_id_end = character_id_start + 999
-        
-        total_checked = 0
-        consecutive_nonexistent = 0  # 连续不存在的卡片计数
-        max_consecutive_nonexistent = 8  # 连续8次无新卡片则视为下载完成
-        found_any_card = False  # 是否找到过任何卡片
-        
-        logging.info(f"开始下载角色卡片，ID范围: {character_id_start} - {character_id_end}")
-        
-        for card_id in range(character_id_start, character_id_end + 1):
-            # 检查卡片是否存在
-            exists, server = self.check_card_exists(card_id)
-            
-            if not exists['normal'] and not exists['trained']:
-                # 卡片不存在，增加连续计数
-                consecutive_nonexistent += 1
-                self.stats["nonexistent"].append(card_id)
-                logging.info(f"卡片 {card_id} 不存在，连续计数: {consecutive_nonexistent}")
-                
-                # 如果找到过卡片，并且连续8次没有找到卡片，判定为已下载完成
-                if found_any_card and consecutive_nonexistent >= max_consecutive_nonexistent:
-                    logging.info(f"已找到卡片，且连续{max_consecutive_nonexistent}次未找到新卡片，判定为下载完成")
-                    break
-                    
-                continue
-            
-            # 找到了卡片，记录状态并重置连续计数
-            found_any_card = True
-            consecutive_nonexistent = 0
-            logging.info(f"找到卡片 {card_id}，重置连续不存在计数")
-            
-            # 下载找到的卡片
-            result = self.download_card(card_id, server)
-            
-            # 更新统计信息
-            if result['normal'] and result['trained']:
-                self.stats["complete"] += 1
-                logging.info(f"卡片 {card_id} 完整下载成功")
-            elif result['normal']:
-                self.stats["normal_only"] += 1
-                logging.info(f"卡片 {card_id} 仅normal形态下载成功")
-            elif result['trained']:
-                self.stats["trained_only"] += 1
-                logging.info(f"卡片 {card_id} 仅trained形态下载成功")
-            else:
-                self.stats["failed"] += 1
-                logging.info(f"卡片 {card_id} 下载失败")
-            
-            total_checked += 1
-            
-            # 回调通知进度
-            if callback:
-                callback(card_id, total_checked, character_id_end - character_id_start + 1, self.stats)
-        
-        # 如果完全没有找到卡片
-        if not found_any_card:
-            logging.warning(f"ID范围 {character_id_start} - {character_id_end} 内未找到任何卡片")
-            
-        return self.stats
 
 class DownloadThread(QThread):
     """下载线程"""
@@ -524,13 +284,38 @@ class MenuComboBox(QWidget):
         self.button.setSizePolicy(QComboBox().sizePolicy())
         layout.addWidget(self.button)
         
-        self._menu = QMenu(self)
+        # 创建自定义菜单类，阻止菜单项点击后自动关闭
+        # QMenu 对于 checkable 的 action，默认不会关闭菜单
+        # 我们只需要确保菜单有正确的对象名以应用主题样式
+        class NonClosingMenu(QMenu):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setObjectName("FilterMenu")
+                # 设置菜单不会在点击 checkable action 时关闭
+                # QMenu 默认已经支持这个行为
+                
+            def keyPressEvent(self, event):
+                """重写键盘事件，ESC键关闭菜单"""
+                if event.key() == Qt.Key.Key_Escape:
+                    self.hide()
+                    return
+                super().keyPressEvent(event)
+        
+        self._menu = NonClosingMenu(self)
+        
+        # 手指针样式已在主题样式中定义，这里添加基础样式并确保手指针生效
+        # 注意：需要添加 cursor: pointer; 以确保手指针效果
         self._menu.setStyleSheet("""
             QMenu::item { 
                 padding: 8px; 
+                cursor: pointer;
             }
             QMenu::item:selected { 
                 background-color: #e0e0e0; 
+                cursor: pointer;
+            }
+            QMenu::item:hover {
+                cursor: pointer;
             }
             QLabel {
                 padding: 3px 0;
@@ -556,10 +341,21 @@ class MenuComboBox(QWidget):
         """)
         
         # 创建一个确认按钮，用于关闭菜单
+        # 注意：确认按钮不是 checkable 的，点击后会关闭菜单（这是默认行为）
         self.confirm_action = QAction("确认选择", self)
         self.confirm_action.triggered.connect(self._menu.hide)
         
+        # 连接菜单的triggered信号，用于处理菜单项点击（可选）
+        # 注意：对于 checkable 的 action，菜单不会自动关闭
+        self._menu.triggered.connect(self._on_menu_item_triggered)
+        
         self.button.setMenu(self._menu)
+    
+    def _on_menu_item_triggered(self, action):
+        """处理菜单项触发"""
+        # 对于 checkable 的 action，QMenu 默认不会关闭菜单
+        # 对于确认按钮（非 checkable），会触发 hide() 关闭菜单
+        pass
     
     def menu(self):
         """获取菜单对象"""
@@ -828,7 +624,14 @@ class CardDownloadPage(QWidget):
     
     def setup_band_menu(self):
         """设置乐队下拉菜单"""
-        menu = QMenu(self)
+        # 使用自定义菜单类，支持手指针和点击外部关闭
+        # 注意：QMenu 默认支持点击外部关闭，我们只需要设置对象名以应用主题样式
+        class FilterMenu(QMenu):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setObjectName("FilterMenu")
+        
+        menu = FilterMenu(self)
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
@@ -977,7 +780,21 @@ class CardDownloadPage(QWidget):
     
     def setup_instrument_menu(self):
         """设置乐器下拉菜单"""
-        menu = QMenu(self)
+        # 使用自定义菜单类，支持手指针和点击外部关闭
+        class FilterMenu(QMenu):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setObjectName("FilterMenu")
+            
+            def mousePressEvent(self, event):
+                """重写鼠标点击事件，点击菜单外部时关闭"""
+                if event.button() == Qt.MouseButton.LeftButton:
+                    if not self.rect().contains(event.pos()):
+                        self.hide()
+                        return
+                super().mousePressEvent(event)
+        
+        menu = FilterMenu(self)
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
@@ -1126,8 +943,22 @@ class CardDownloadPage(QWidget):
         instrument_ids = self.get_selected_instrument_ids()
         characters = self.get_filtered_characters(band_ids, instrument_ids)
         
+        # 使用自定义菜单类，支持手指针和点击外部关闭
+        class FilterMenu(QMenu):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setObjectName("FilterMenu")
+            
+            def mousePressEvent(self, event):
+                """重写鼠标点击事件，点击菜单外部时关闭"""
+                if event.button() == Qt.MouseButton.LeftButton:
+                    if not self.rect().contains(event.pos()):
+                        self.hide()
+                        return
+                super().mousePressEvent(event)
+        
         # 创建菜单
-        menu = QMenu(self)
+        menu = FilterMenu(self)
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
