@@ -10,9 +10,6 @@ Pillow>=9.0.0
 requests>=2.26.0
 urllib3>=1.26.0
 
-# 日志
-colorlog>=6.7.0
-
 # 打包工具
 pyinstaller>=6.0.0
 pywin32>=306

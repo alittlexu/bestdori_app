@@ -465,20 +465,14 @@ class MenuComboBox(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -488,7 +482,6 @@ class MenuComboBox(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -502,14 +495,12 @@ class MenuComboBox(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -517,7 +508,6 @@ class MenuComboBox(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -911,20 +901,14 @@ class AnimationEpisodeDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -934,7 +918,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -948,14 +931,12 @@ class AnimationEpisodeDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -963,7 +944,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -978,6 +958,7 @@ class AnimationEpisodeDownloadPage(QWidget):
         
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         all_label = QLabel("全部", all_widget)
@@ -1012,6 +993,7 @@ class AnimationEpisodeDownloadPage(QWidget):
             band_layout.setContentsMargins(8, 4, 8, 4)
             
             checkbox = QCheckBox(band_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             band_layout.addWidget(checkbox)
             
             label = QLabel(band['name'], band_widget)
@@ -1089,20 +1071,14 @@ class AnimationEpisodeDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -1112,7 +1088,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -1126,14 +1101,12 @@ class AnimationEpisodeDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -1141,7 +1114,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -1156,6 +1128,7 @@ class AnimationEpisodeDownloadPage(QWidget):
         
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         all_label = QLabel("全部", all_widget)
@@ -1189,6 +1162,7 @@ class AnimationEpisodeDownloadPage(QWidget):
             instrument_layout.setContentsMargins(8, 4, 8, 4)
             
             checkbox = QCheckBox(instrument_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             instrument_layout.addWidget(checkbox)
             
             label = QLabel(instrument['name'], instrument_widget)
@@ -1266,20 +1240,14 @@ class AnimationEpisodeDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -1289,7 +1257,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -1303,14 +1270,12 @@ class AnimationEpisodeDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -1318,7 +1283,6 @@ class AnimationEpisodeDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -1333,6 +1297,7 @@ class AnimationEpisodeDownloadPage(QWidget):
         
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         all_label = QLabel("全部", all_widget)
@@ -1366,6 +1331,7 @@ class AnimationEpisodeDownloadPage(QWidget):
             character_layout.setContentsMargins(8, 4, 8, 4)
             
             checkbox = QCheckBox(character_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             character_layout.addWidget(checkbox)
             
             label = QLabel(character['name'], character_widget)
@@ -1603,25 +1569,41 @@ class AnimationEpisodeDownloadPage(QWidget):
             if item.widget():
                 item.widget().deleteLater()
         
-        self.progress_bar.setVisible(False)
-        self.status_label.setText("")
+        # 重置进度条和状态
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setVisible(False)
+        if hasattr(self, 'status_label'):
+            self.status_label.setText("")
         
-        self.download_button.setEnabled(True)
-        self.stop_button.setVisible(False)
+        # 重新启用下载按钮
+        if hasattr(self, 'download_button'):
+            self.download_button.setEnabled(True)
+        if hasattr(self, 'stop_button'):
+            self.stop_button.setVisible(False)
         
         self.add_log_entry("界面已重置", True)
     
     def on_stop_clicked(self):
         """处理停止按钮点击事件"""
-        if hasattr(self, 'download_thread') and self.download_thread.isRunning():
-            self.download_thread.terminate()
-            self.download_thread.wait()
+        # 安全地终止线程
+        if hasattr(self, 'download_thread') and self.download_thread is not None:
+            if self.download_thread.isRunning():
+                self.download_thread.terminate()
+                self.download_thread.wait(3000)  # 最多等待3秒
+                # 清理线程引用
+                self.download_thread = None
             
-            self.download_button.setEnabled(True)
-            self.stop_button.setVisible(False)
-            self.progress_bar.setVisible(False)
+            # 更新UI状态
+            if hasattr(self, 'download_button'):
+                self.download_button.setEnabled(True)
+            if hasattr(self, 'stop_button'):
+                self.stop_button.setVisible(False)
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(False)
             
-            self.add_log_entry("下载已停止", False)
+            # 添加停止日志
+            if hasattr(self, 'add_log_entry'):
+                self.add_log_entry("下载已停止", False)
             QMessageBox.information(self, "下载停止", "下载任务已终止")
             
     def on_filter_clicked(self):
@@ -1708,9 +1690,13 @@ class AnimationEpisodeDownloadPage(QWidget):
     
     def on_download_completed(self, result):
         """下载完成处理"""
-        self.progress_bar.setVisible(False)
-        self.download_button.setEnabled(True)
-        self.stop_button.setVisible(False)
+        # 安全地更新UI状态
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setVisible(False)
+        if hasattr(self, 'download_button'):
+            self.download_button.setEnabled(True)
+        if hasattr(self, 'stop_button'):
+            self.stop_button.setVisible(False)
         
         if result['success']:
             nonexistent_count = len(result.get('nonexistent', []))

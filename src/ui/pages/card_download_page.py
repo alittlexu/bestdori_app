@@ -438,9 +438,8 @@ class MenuComboBox(QWidget):
         
         self._menu = NonClosingMenu(self)
         
-        # 手指针样式已在主题样式中定义，这里添加基础样式并确保手指针生效
-        # 注意：需要添加 cursor: pointer; 以确保手指针效果
         # QMenu 默认支持：1) checkable action 点击后不关闭菜单；2) 点击外部区域关闭菜单
+        # 注意：cursor 属性在某些子控件中不支持，已在 Python 代码中使用 setCursor() 设置
         self._menu.setStyleSheet("""
             QMenu {
                 background-color: white;
@@ -453,20 +452,14 @@ class MenuComboBox(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -476,7 +469,6 @@ class MenuComboBox(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -490,14 +482,12 @@ class MenuComboBox(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -505,7 +495,6 @@ class MenuComboBox(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -906,20 +895,14 @@ class CardDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -929,7 +912,6 @@ class CardDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -943,14 +925,12 @@ class CardDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -958,7 +938,6 @@ class CardDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -974,6 +953,7 @@ class CardDownloadPage(QWidget):
         # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         # 创建标签并使其可点击
@@ -1015,6 +995,7 @@ class CardDownloadPage(QWidget):
             
             # 创建复选框
             checkbox = QCheckBox(band_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             band_layout.addWidget(checkbox)
             
             # 创建标签并使其可点击
@@ -1108,20 +1089,14 @@ class CardDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -1131,7 +1106,6 @@ class CardDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -1145,14 +1119,12 @@ class CardDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -1160,7 +1132,6 @@ class CardDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -1176,6 +1147,7 @@ class CardDownloadPage(QWidget):
         # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         # 创建标签并使其可点击
@@ -1216,6 +1188,7 @@ class CardDownloadPage(QWidget):
             
             # 创建复选框
             checkbox = QCheckBox(instrument_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             instrument_layout.addWidget(checkbox)
             
             # 创建标签并使其可点击
@@ -1311,20 +1284,14 @@ class CardDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected { 
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -1334,7 +1301,6 @@ class CardDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -1348,14 +1314,12 @@ class CardDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -1363,7 +1327,6 @@ class CardDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -1379,6 +1342,7 @@ class CardDownloadPage(QWidget):
         # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         all_layout.addWidget(all_checkbox)
         
         # 创建标签并使其可点击
@@ -1419,6 +1383,7 @@ class CardDownloadPage(QWidget):
             
             # 创建复选框
             checkbox = QCheckBox(character_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
             character_layout.addWidget(checkbox)
             
             # 创建标签并使其可点击
@@ -1695,31 +1660,42 @@ class CardDownloadPage(QWidget):
                 item.widget().deleteLater()
         
         # 重置进度条和状态
-        self.progress_bar.setVisible(False)
-        self.status_label.setText("")
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setVisible(False)
+        if hasattr(self, 'status_label'):
+            self.status_label.setText("")
         
         # 重新启用下载按钮
-        self.download_button.setEnabled(True)
-        self.stop_button.setVisible(False)
+        if hasattr(self, 'download_button'):
+            self.download_button.setEnabled(True)
+        if hasattr(self, 'stop_button'):
+            self.stop_button.setVisible(False)
         
         # 添加刷新日志
         self.add_log_entry("界面已重置", True)
     
     def on_stop_clicked(self):
         """处理停止按钮点击事件"""
-        # 如果有活动的下载线程
-        if hasattr(self, 'download_thread') and self.download_thread.isRunning():
-            # 终止线程
-            self.download_thread.terminate()
-            self.download_thread.wait()
+        # 安全地终止线程
+        if hasattr(self, 'download_thread') and self.download_thread is not None:
+            if self.download_thread.isRunning():
+                # 终止线程
+                self.download_thread.terminate()
+                self.download_thread.wait(3000)  # 最多等待3秒
+                # 清理线程引用
+                self.download_thread = None
             
             # 更新UI状态
-            self.download_button.setEnabled(True)
-            self.stop_button.setVisible(False)
-            self.progress_bar.setVisible(False)
+            if hasattr(self, 'download_button'):
+                self.download_button.setEnabled(True)
+            if hasattr(self, 'stop_button'):
+                self.stop_button.setVisible(False)
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(False)
             
             # 添加停止日志
-            self.add_log_entry("下载已停止", False)
+            if hasattr(self, 'add_log_entry'):
+                self.add_log_entry("下载已停止", False)
             QMessageBox.information(self, "下载停止", "下载任务已终止")
             
     def on_filter_clicked(self):
@@ -1811,9 +1787,13 @@ class CardDownloadPage(QWidget):
     
     def on_download_completed(self, result):
         """下载完成处理"""
-        self.progress_bar.setVisible(False)
-        self.download_button.setEnabled(True)
-        self.stop_button.setVisible(False)
+        # 安全地更新UI状态
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setVisible(False)
+        if hasattr(self, 'download_button'):
+            self.download_button.setEnabled(True)
+        if hasattr(self, 'stop_button'):
+            self.stop_button.setVisible(False)
         
         if result['success']:
             # 获取不存在的卡片数量

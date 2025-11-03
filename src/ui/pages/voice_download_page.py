@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar,
     QFileDialog, QFrame, QMessageBox, QScrollArea, QTabWidget, QGroupBox,
-    QListWidget, QListWidgetItem, QApplication
+    QListWidget, QListWidgetItem, QApplication, QCheckBox, QWidgetAction
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -77,6 +77,9 @@ class VoiceDownloadPage(QWidget):
         self._instrument_cats = ['吉他', '贝斯', '鼓', '键盘', '主唱', 'DJ', '小提琴']
         self._bands = []
         self._characters = []
+        # 初始化任务统计
+        self._task_index = 0
+        self._task_total = 0
         # 定义统一的菜单样式，供所有筛选菜单使用
         self._menu_stylesheet = """
             QMenu {
@@ -90,20 +93,14 @@ class VoiceDownloadPage(QWidget):
                 color: #333333;
                 background: transparent;
                 min-height: 15px;
-                cursor: pointer;
             }
             QMenu::item:hover {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
             }
             QMenu::item:selected {
                 background: rgb(135, 206, 250);
                 color: #FFFFFF;
-                cursor: pointer;
-            }
-            QMenu::item:disabled {
-                cursor: default;
             }
             QMenu::indicator {
                 width: 16px;
@@ -113,7 +110,6 @@ class VoiceDownloadPage(QWidget):
                 background: #FFFFFF;
                 margin-left: 8px;
                 margin-right: 8px;
-                cursor: pointer;
             }
             QMenu::indicator:checked {
                 background: rgb(135, 206, 250);
@@ -127,14 +123,12 @@ class VoiceDownloadPage(QWidget):
             QLabel {
                 padding: 3px 0;
                 color: #333333;
-                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
-                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
@@ -142,7 +136,6 @@ class VoiceDownloadPage(QWidget):
                 border: 1px solid #E1E6EF;
                 border-radius: 4px;
                 background-color: white;
-                cursor: pointer;
             }
             QCheckBox::indicator:checked {
                 background-color: rgb(135, 206, 250);
@@ -457,13 +450,33 @@ class VoiceDownloadPage(QWidget):
         self._thread.start()
 
     def _on_stop(self):
-        if self._thread and self._thread.isRunning():
-            self._thread.terminate()
-            self._thread.wait()
-        self.start_btn.setEnabled(True)
-        self.stop_btn.setVisible(False)
-        self.progress.setVisible(False)
-        self._append_log("下载已停止")
+        """处理停止/暂停/取消下载"""
+        # 安全地终止线程
+        if hasattr(self, '_thread') and self._thread is not None:
+            if self._thread.isRunning():
+                self._thread.terminate()
+                self._thread.wait(3000)  # 最多等待3秒
+                # 清理线程引用
+                self._thread = None
+        
+        # 更新UI状态
+        if hasattr(self, 'start_btn'):
+            self.start_btn.setEnabled(True)
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.setVisible(False)
+        
+        # 注意：语音获取页面没有独立的进度条，只有 progress_summary 标签
+        # 重置进度显示
+        if hasattr(self, 'progress_summary'):
+            self.progress_summary.setText("当前下载任务 (0/0)")
+        
+        # 重置任务统计
+        self._task_index = 0
+        self._task_total = 0
+        
+        # 添加日志
+        if hasattr(self, 'tasks_list'):
+            self._append_log("下载已停止")
 
     def _on_progress(self, value: int):
         # 顶部汇总用整体百分比呈现（无需单条更新）
@@ -489,14 +502,22 @@ class VoiceDownloadPage(QWidget):
             self.tasks_list.addItem(item)
 
     def _on_completed(self, result: dict):
+        """下载完成处理"""
         self.start_btn.setEnabled(True)
         self.stop_btn.setVisible(False)
+        # 注意：语音获取页面没有独立的进度条，只有 progress_summary 标签
+        # 重置进度显示已在完成时由 _update_summary 处理
+        
         if result.get('success'):
             self._update_summary(done=True)
             QMessageBox.information(self, "完成", "语音下载完成（占位统计）")
         else:
             msg = result.get('message', '未知错误')
             QMessageBox.warning(self, "失败", msg)
+            # 失败时重置进度显示
+            self.progress_summary.setText("当前下载任务 (0/0)")
+            self._task_index = 0
+            self._task_total = 0
 
     def _append_log(self, text: str):
         self.tasks_list.addItem(QListWidgetItem(text))
@@ -575,78 +596,229 @@ class VoiceDownloadPage(QWidget):
             QMessageBox.warning(self, "数据加载失败", f"无法加载人物数据: {e}")
 
     def _populate_filters(self):
-        # 乐队填充
-        # 注意：MenuComboBox 内部已经设置了完整的菜单样式（包括手指针效果）
-        # 我们只需要确保菜单对象名正确，样式会自动从 MenuComboBox 内部应用
+        # 乐队填充 - 使用 QWidgetAction + QCheckBox + QLabel 实现手指针效果和批量选择
         band_menu = self.band_select.menu()
-        # 确保菜单对象名正确（apply样式）
         band_menu.setObjectName("FilterMenu")
-        # 注意：MenuComboBox 内部已经设置了样式，我们不应该覆盖它
-        # 如果需要强制应用样式，在 aboutToShow 时重新设置
+        
         def ensure_band_menu_style():
-            # 在菜单显示前确保样式被应用
             band_menu.setStyleSheet(self._menu_stylesheet)
-        # 先断开之前的连接（如果存在）
         try:
             band_menu.aboutToShow.disconnect()
         except:
             pass
         band_menu.aboutToShow.connect(ensure_band_menu_style)
-        # 立即设置一次样式
         band_menu.setStyleSheet(self._menu_stylesheet)
         band_menu.clear()
-        for band in self._bands:
-            act = band_menu.addAction(band.get('name') or '')
-            act.setCheckable(True)  # 设置为checkable，点击后不会关闭菜单
-            act.setData({'type': 'band', 'id': band.get('id')})
+        
+        # 创建"全部"选项
+        all_widget = QWidget(band_menu)
+        all_layout = QHBoxLayout(all_widget)
+        all_layout.setContentsMargins(8, 4, 8, 4)
+        
+        all_checkbox = QCheckBox(all_widget)
+        all_checkbox.setChecked(True)
+        all_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_layout.addWidget(all_checkbox)
+        
+        all_label = QLabel("全部", all_widget)
+        all_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_label.setProperty("is_checked", True)
+        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        
+        def create_band_click_handler(cb):
+            return lambda e: self._toggle_band_checkbox(cb)
+        
+        all_label.mousePressEvent = create_band_click_handler(all_checkbox)
+        all_checkbox.stateChanged.connect(lambda state: self._on_band_checkbox_changed(-1, state))
+        all_layout.addWidget(all_label)
+        all_layout.addStretch()
+        
+        all_action = QWidgetAction(band_menu)
+        all_action.setDefaultWidget(all_widget)
+        band_menu.addAction(all_action)
+        
+        # 存储全部复选框引用
+        self.band_checkboxes = {-1: all_checkbox}
+        self.band_actions = {-1: all_action}
+        self.band_labels = {-1: all_label}
+        
         band_menu.addSeparator()
-        # 确认按钮不是checkable的，点击后会关闭菜单
-        # 移除之前的连接，重新连接到当前菜单的hide方法
-        try:
-            self.band_select.confirm_action.triggered.disconnect()
-        except:
-            pass
-        self.band_select.confirm_action.triggered.connect(band_menu.hide)
-        band_menu.addAction(self.band_select.confirm_action)
+        
+        # 添加每个乐队选项
+        for band in self._bands:
+            band_widget = QWidget(band_menu)
+            band_layout = QHBoxLayout(band_widget)
+            band_layout.setContentsMargins(8, 4, 8, 4)
+            
+            checkbox = QCheckBox(band_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+            checkbox.setChecked(False)  # 初始未选中，只有"全部"选中
+            band_layout.addWidget(checkbox)
+            
+            label = QLabel(band.get('name') or '', band_widget)
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            label.setProperty("is_checked", False)  # 默认未选中
+            label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+            label.mousePressEvent = create_band_click_handler(checkbox)
+            band_layout.addWidget(label)
+            band_layout.addStretch()
+            
+            action = QWidgetAction(band_menu)
+            action.setDefaultWidget(band_widget)
+            band_menu.addAction(action)
+            
+            self.band_checkboxes[band.get('id')] = checkbox
+            self.band_actions[band.get('id')] = action
+            self.band_labels[band.get('id')] = label
+            checkbox.stateChanged.connect(lambda state, b_id=band.get('id'): self._on_band_checkbox_changed(b_id, state))
+        
+        band_menu.addSeparator()
+        confirm_widget = QWidget(band_menu)
+        confirm_layout = QHBoxLayout(confirm_widget)
+        confirm_layout.setContentsMargins(8, 2, 8, 2)
+        
+        confirm_button = QPushButton("确认选择", confirm_widget)
+        confirm_button.setStyleSheet("""
+            QPushButton {
+                background-color: #E85D9E; 
+                color: white; 
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #D35490;
+            }
+            QPushButton:pressed {
+                background-color: #B3487D;
+            }
+        """)
+        confirm_button.clicked.connect(band_menu.hide)
+        confirm_layout.addWidget(confirm_button)
+        
+        confirm_action = QWidgetAction(band_menu)
+        confirm_action.setDefaultWidget(confirm_widget)
+        band_menu.addAction(confirm_action)
+        
+        # 更新确认按钮引用
+        self.band_select.confirm_action = confirm_action
 
-        # 乐器填充
+        # 乐器填充 - 使用 QWidgetAction + QCheckBox + QLabel 实现手指针效果和批量选择
         ins_menu = self.instrument_select.menu()
-        # 确保菜单对象名正确（apply样式）
         ins_menu.setObjectName("FilterMenu")
-        # 注意：MenuComboBox 内部已经设置了样式，我们不应该覆盖它
-        # 如果需要强制应用样式，在 aboutToShow 时重新设置
+        
         def ensure_ins_menu_style():
-            # 在菜单显示前确保样式被应用
             ins_menu.setStyleSheet(self._menu_stylesheet)
-        # 先断开之前的连接（如果存在）
         try:
             ins_menu.aboutToShow.disconnect()
         except:
             pass
         ins_menu.aboutToShow.connect(ensure_ins_menu_style)
-        # 立即设置一次样式
         ins_menu.setStyleSheet(self._menu_stylesheet)
         ins_menu.clear()
-        for ins in self._instrument_cats:
-            act = ins_menu.addAction(ins)
-            act.setCheckable(True)  # 设置为checkable，点击后不会关闭菜单
-            act.setData({'type': 'instrument', 'cat': ins})
+        
+        # 创建"全部"选项
+        all_ins_widget = QWidget(ins_menu)
+        all_ins_layout = QHBoxLayout(all_ins_widget)
+        all_ins_layout.setContentsMargins(8, 4, 8, 4)
+        
+        all_ins_checkbox = QCheckBox(all_ins_widget)
+        all_ins_checkbox.setChecked(True)
+        all_ins_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_ins_layout.addWidget(all_ins_checkbox)
+        
+        all_ins_label = QLabel("全部", all_ins_widget)
+        all_ins_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_ins_label.setProperty("is_checked", True)
+        all_ins_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        
+        def create_ins_click_handler(cb):
+            return lambda e: self._toggle_instrument_checkbox(cb)
+        
+        all_ins_label.mousePressEvent = create_ins_click_handler(all_ins_checkbox)
+        all_ins_checkbox.stateChanged.connect(lambda state: self._on_instrument_checkbox_changed(-1, state))
+        all_ins_layout.addWidget(all_ins_label)
+        all_ins_layout.addStretch()
+        
+        all_ins_action = QWidgetAction(ins_menu)
+        all_ins_action.setDefaultWidget(all_ins_widget)
+        ins_menu.addAction(all_ins_action)
+        
+        # 存储全部复选框引用
+        self.instrument_checkboxes = {-1: all_ins_checkbox}
+        self.instrument_actions = {-1: all_ins_action}
+        self.instrument_labels = {-1: all_ins_label}
+        
         ins_menu.addSeparator()
-        # 确认按钮不是checkable的，点击后会关闭菜单
-        # 移除之前的连接，重新连接到当前菜单的hide方法
-        try:
-            self.instrument_select.confirm_action.triggered.disconnect()
-        except:
-            pass
-        self.instrument_select.confirm_action.triggered.connect(ins_menu.hide)
-        ins_menu.addAction(self.instrument_select.confirm_action)
+        
+        # 添加每个乐器选项
+        for ins in self._instrument_cats:
+            ins_widget = QWidget(ins_menu)
+            ins_layout = QHBoxLayout(ins_widget)
+            ins_layout.setContentsMargins(8, 4, 8, 4)
+            
+            checkbox = QCheckBox(ins_widget)
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+            checkbox.setChecked(False)  # 初始未选中，只有"全部"选中
+            ins_layout.addWidget(checkbox)
+            
+            label = QLabel(ins, ins_widget)
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            label.setProperty("is_checked", False)  # 默认未选中
+            label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+            label.mousePressEvent = create_ins_click_handler(checkbox)
+            ins_layout.addWidget(label)
+            ins_layout.addStretch()
+            
+            action = QWidgetAction(ins_menu)
+            action.setDefaultWidget(ins_widget)
+            ins_menu.addAction(action)
+            
+            self.instrument_checkboxes[ins] = checkbox
+            self.instrument_actions[ins] = action
+            self.instrument_labels[ins] = label
+            checkbox.stateChanged.connect(lambda state, ins_cat=ins: self._on_instrument_checkbox_changed(ins_cat, state))
+        
+        ins_menu.addSeparator()
+        confirm_ins_widget = QWidget(ins_menu)
+        confirm_ins_layout = QHBoxLayout(confirm_ins_widget)
+        confirm_ins_layout.setContentsMargins(8, 2, 8, 2)
+        
+        confirm_ins_button = QPushButton("确认选择", confirm_ins_widget)
+        confirm_ins_button.setStyleSheet("""
+            QPushButton {
+                background-color: #E85D9E; 
+                color: white; 
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #D35490;
+            }
+            QPushButton:pressed {
+                background-color: #B3487D;
+            }
+        """)
+        confirm_ins_button.clicked.connect(ins_menu.hide)
+        confirm_ins_layout.addWidget(confirm_ins_button)
+        
+        confirm_ins_action = QWidgetAction(ins_menu)
+        confirm_ins_action.setDefaultWidget(confirm_ins_widget)
+        ins_menu.addAction(confirm_ins_action)
+        
+        # 更新确认按钮引用
+        self.instrument_select.confirm_action = confirm_ins_action
 
-        # 连接信号
-        band_menu.triggered.connect(self._on_band_menu_changed)
-        ins_menu.triggered.connect(self._on_instrument_menu_changed)
         # 确认按钮也触发一次文本刷新
-        self.band_select.confirm_action.triggered.connect(lambda: self._update_band_text())
-        self.instrument_select.confirm_action.triggered.connect(lambda: self._update_instrument_text())
+        confirm_button.clicked.connect(lambda: self._update_band_text())
+        confirm_ins_button.clicked.connect(lambda: self._update_instrument_text())
+        
+        # 初始化时更新文本显示（显示"全部"状态）
+        self._update_band_text()
+        self._update_instrument_text()
         
         # 人物填充将通过_update_character_menu方法实现，该方法会根据前两级筛选结果动态更新
         # 注意：_update_character_menu内部会连接char_menu的信号，所以这里不需要重复连接
@@ -683,101 +855,420 @@ class VoiceDownloadPage(QWidget):
         char_menu.aboutToShow.connect(ensure_char_menu_style)
         # 立即设置一次样式
         char_menu.setStyleSheet(self._menu_stylesheet)
+        
+        # 在清除菜单之前，先断开所有信号连接并清理引用，避免访问已删除的对象
+        if hasattr(self, 'character_checkboxes'):
+            # 断开所有信号连接
+            for checkbox in list(self.character_checkboxes.values()):
+                try:
+                    checkbox.stateChanged.disconnect()
+                except:
+                    pass
+        
+        # 清空引用字典（在clear之前）
+        if hasattr(self, 'character_checkboxes'):
+            self.character_checkboxes.clear()
+        if hasattr(self, 'character_actions'):
+            self.character_actions.clear()
+        if hasattr(self, 'character_labels'):
+            self.character_labels.clear()
+        
         char_menu.clear()
         
         # 构建 band_id -> band_name 映射
         band_name_map = {b.get('id'): (b.get('name') or '') for b in self._bands}
         
-        # 按乐队分组显示
-        from PyQt6.QtWidgets import QLabel, QWidgetAction
+        # 按乐队分组显示 - 使用 QWidgetAction + QCheckBox + QLabel 实现手指针效果和批量选择
         grouped = {}
         for ch in filtered_characters:
             grouped.setdefault(ch.get('band_id'), []).append(ch)
         
+        # 初始化存储结构（已在上面的clear()前清空，这里重新创建）
+        self.character_checkboxes = {}
+        self.character_actions = {}
+        self.character_labels = {}
+        
+        # 创建"全部"选项
+        all_char_widget = QWidget(char_menu)
+        all_char_layout = QHBoxLayout(all_char_widget)
+        all_char_layout.setContentsMargins(8, 4, 8, 4)
+        
+        all_char_checkbox = QCheckBox(all_char_widget)
+        all_char_checkbox.setChecked(True)
+        all_char_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_char_layout.addWidget(all_char_checkbox)
+        
+        all_char_label = QLabel("全部", all_char_widget)
+        all_char_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        all_char_label.setProperty("is_checked", True)
+        all_char_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        
+        def create_char_click_handler(cb):
+            return lambda e: self._toggle_character_checkbox(cb)
+        
+        all_char_label.mousePressEvent = create_char_click_handler(all_char_checkbox)
+        all_char_checkbox.stateChanged.connect(lambda state: self._on_character_checkbox_changed(-1, state))
+        all_char_layout.addWidget(all_char_label)
+        all_char_layout.addStretch()
+        
+        all_char_action = QWidgetAction(char_menu)
+        all_char_action.setDefaultWidget(all_char_widget)
+        char_menu.addAction(all_char_action)
+        
+        self.character_checkboxes[-1] = all_char_checkbox
+        self.character_actions[-1] = all_char_action
+        self.character_labels[-1] = all_char_label
+        
+        char_menu.addSeparator()
+        
         for band_id, members in grouped.items():
             # 分组标题
             title = QLabel(band_name_map.get(band_id, ''))
+            title.setStyleSheet("font-weight: bold; color: #666666; padding: 4px 8px;")
             title_action = QWidgetAction(char_menu)
             title_action.setDefaultWidget(title)
             char_menu.addAction(title_action)
+            
             # 成员项
             for ch in members:
-                label = f"{ch.get('name')} ({ch.get('nickname')})"
-                act = char_menu.addAction(label)
-                act.setCheckable(True)  # 设置为checkable，点击后不会关闭菜单
-                act.setData({'type': 'character', 'nickname': ch.get('nickname'), 'band_id': ch.get('band_id'), 'instrument_cat': ch.get('instrument_cat')})
+                char_widget = QWidget(char_menu)
+                char_layout = QHBoxLayout(char_widget)
+                char_layout.setContentsMargins(8, 4, 8, 4)
+                
+                checkbox = QCheckBox(char_widget)
+                checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+                checkbox.setChecked(False)  # 初始未选中，只有"全部"选中
+                char_layout.addWidget(checkbox)
+                
+                label_text = f"{ch.get('name')} ({ch.get('nickname')})"
+                label = QLabel(label_text, char_widget)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
+                label.setProperty("is_checked", False)  # 默认未选中
+                label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+                label.mousePressEvent = create_char_click_handler(checkbox)
+                char_layout.addWidget(label)
+                char_layout.addStretch()
+                
+                action = QWidgetAction(char_menu)
+                action.setDefaultWidget(char_widget)
+                char_menu.addAction(action)
+                
+                nickname = ch.get('nickname')
+                self.character_checkboxes[nickname] = checkbox
+                self.character_actions[nickname] = action
+                self.character_labels[nickname] = label
+                checkbox.stateChanged.connect(lambda state, n=nickname: self._on_character_checkbox_changed(n, state))
+            
             char_menu.addSeparator()
-        char_menu.addSeparator()
-        # 确认按钮不是checkable的，点击后会关闭菜单
-        # 移除之前的连接，重新连接到当前菜单的hide方法
-        try:
-            self.character_select.confirm_action.triggered.disconnect()
-        except:
-            pass
-        self.character_select.confirm_action.triggered.connect(char_menu.hide)
-        char_menu.addAction(self.character_select.confirm_action)
         
-        # 重新连接信号
-        char_menu.triggered.connect(self._on_character_menu_changed)
-        self.character_select.confirm_action.triggered.connect(lambda: self._update_character_text())
+        char_menu.addSeparator()
+        confirm_char_widget = QWidget(char_menu)
+        confirm_char_layout = QHBoxLayout(confirm_char_widget)
+        confirm_char_layout.setContentsMargins(8, 2, 8, 2)
+        
+        confirm_char_button = QPushButton("确认选择", confirm_char_widget)
+        confirm_char_button.setStyleSheet("""
+            QPushButton {
+                background-color: #E85D9E; 
+                color: white; 
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #D35490;
+            }
+            QPushButton:pressed {
+                background-color: #B3487D;
+            }
+        """)
+        confirm_char_button.clicked.connect(char_menu.hide)
+        confirm_char_button.clicked.connect(lambda: self._update_character_text())
+        confirm_char_layout.addWidget(confirm_char_button)
+        
+        confirm_char_action = QWidgetAction(char_menu)
+        confirm_char_action.setDefaultWidget(confirm_char_widget)
+        char_menu.addAction(confirm_char_action)
+        
+        # 更新确认按钮引用
+        self.character_select.confirm_action = confirm_char_action
     
     def _get_selected_bands(self) -> set:
         """获取当前选中的乐队ID集合"""
         selected_bands = set()
-        band_menu = self.band_select.menu()
-        for a in band_menu.actions():
-            if a.isCheckable() and a.isChecked():
-                data = a.data() or {}
-                if data.get('type') == 'band':
-                    selected_bands.add(data.get('id'))
+        if hasattr(self, 'band_checkboxes'):
+            for band_id, checkbox in list(self.band_checkboxes.items()):
+                try:
+                    if band_id != -1 and checkbox.isChecked():
+                        selected_bands.add(band_id)
+                except RuntimeError:
+                    # 对象已被删除，跳过
+                    continue
         return selected_bands
     
     def _get_selected_instruments(self) -> set:
         """获取当前选中的乐器类别集合"""
         selected_instruments = set()
-        ins_menu = self.instrument_select.menu()
-        for a in ins_menu.actions():
-            if a.isCheckable() and a.isChecked():
-                data = a.data() or {}
-                if data.get('type') == 'instrument':
-                    selected_instruments.add(data.get('cat'))
+        if hasattr(self, 'instrument_checkboxes'):
+            for ins_cat, checkbox in list(self.instrument_checkboxes.items()):
+                try:
+                    if ins_cat != -1 and checkbox.isChecked():
+                        selected_instruments.add(ins_cat)
+                except RuntimeError:
+                    # 对象已被删除，跳过
+                    continue
         return selected_instruments
 
-    def _on_band_menu_changed(self, act):
-        """乐队菜单改变时的处理"""
+    def _toggle_band_checkbox(self, checkbox):
+        """切换乐队复选框状态"""
+        checkbox.setChecked(not checkbox.isChecked())
+    
+    def _toggle_instrument_checkbox(self, checkbox):
+        """切换乐器复选框状态"""
+        checkbox.setChecked(not checkbox.isChecked())
+    
+    def _toggle_character_checkbox(self, checkbox):
+        """切换人物复选框状态"""
+        checkbox.setChecked(not checkbox.isChecked())
+    
+    def _on_band_checkbox_changed(self, band_id, state):
+        """乐队复选框状态改变时的处理"""
+        if band_id == -1:  # "全部"选项
+            if state == Qt.CheckState.Checked:
+                # 如果选中"全部"，取消其他所有选项（使用blockSignals避免触发信号）
+                for id, checkbox in list(self.band_checkboxes.items()):
+                    try:
+                        if id != -1:
+                            checkbox.blockSignals(True)
+                            checkbox.setChecked(False)
+                            checkbox.blockSignals(False)
+                            # 只更新标签样式，不触发其他复选框的更新
+                            if id in self.band_labels:
+                                self.band_labels[id].setProperty("is_checked", False)
+                                self.band_labels[id].setStyleSheet("color: #333333;")
+                    except RuntimeError:
+                        continue
+                
+                # 更新"全部"标签样式
+                if -1 in self.band_labels:
+                    self.band_labels[-1].setProperty("is_checked", True)
+                    self.band_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+        else:  # 其他选项
+            is_checked = state == Qt.CheckState.Checked
+            # 检查是否有任何具体选项被选中
+            any_specific_checked = False
+            for id, checkbox in list(self.band_checkboxes.items()):
+                try:
+                    if id != -1 and checkbox.isChecked():
+                        any_specific_checked = True
+                        break
+                except RuntimeError:
+                    continue
+            
+            # 如果有任何具体选项被选中，取消"全部"选项
+            if any_specific_checked:
+                if -1 in self.band_checkboxes:
+                    try:
+                        self.band_checkboxes[-1].blockSignals(True)
+                        self.band_checkboxes[-1].setChecked(False)
+                        self.band_checkboxes[-1].blockSignals(False)
+                        if -1 in self.band_labels:
+                            self.band_labels[-1].setProperty("is_checked", False)
+                            self.band_labels[-1].setStyleSheet("color: #333333;")
+                    except RuntimeError:
+                        pass
+            else:
+                # 如果没有任何具体选项被选中，选中"全部"选项
+                if -1 in self.band_checkboxes:
+                    try:
+                        self.band_checkboxes[-1].blockSignals(True)
+                        self.band_checkboxes[-1].setChecked(True)
+                        self.band_checkboxes[-1].blockSignals(False)
+                        if -1 in self.band_labels:
+                            self.band_labels[-1].setProperty("is_checked", True)
+                            self.band_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+                    except RuntimeError:
+                        pass
+            
+            # 更新当前选项样式
+            if band_id in self.band_labels:
+                try:
+                    label = self.band_labels[band_id]
+                    label.setProperty("is_checked", is_checked)
+                    label.setStyleSheet("color: #4CAF50;" if is_checked else "color: #333333;")
+                except RuntimeError:
+                    pass
+        
         self._update_band_text()
-        # 更新成员菜单以反映新的筛选条件
         self._update_character_menu()
+    
+    def _on_instrument_checkbox_changed(self, ins_cat, state):
+        """乐器复选框状态改变时的处理"""
+        if ins_cat == -1:  # "全部"选项
+            if state == Qt.CheckState.Checked:
+                # 如果选中"全部"，取消其他所有选项（使用blockSignals避免触发信号）
+                for cat, checkbox in list(self.instrument_checkboxes.items()):
+                    try:
+                        if cat != -1:
+                            checkbox.blockSignals(True)
+                            checkbox.setChecked(False)
+                            checkbox.blockSignals(False)
+                            # 只更新标签样式，不触发其他复选框的更新
+                            if cat in self.instrument_labels:
+                                self.instrument_labels[cat].setProperty("is_checked", False)
+                                self.instrument_labels[cat].setStyleSheet("color: #333333;")
+                    except RuntimeError:
+                        continue
+                
+                # 更新"全部"标签样式
+                if -1 in self.instrument_labels:
+                    self.instrument_labels[-1].setProperty("is_checked", True)
+                    self.instrument_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+        else:  # 其他选项
+            is_checked = state == Qt.CheckState.Checked
+            # 检查是否有任何具体选项被选中
+            any_specific_checked = False
+            for cat, checkbox in list(self.instrument_checkboxes.items()):
+                try:
+                    if cat != -1 and checkbox.isChecked():
+                        any_specific_checked = True
+                        break
+                except RuntimeError:
+                    continue
+            
+            # 如果有任何具体选项被选中，取消"全部"选项
+            if any_specific_checked:
+                if -1 in self.instrument_checkboxes:
+                    try:
+                        self.instrument_checkboxes[-1].blockSignals(True)
+                        self.instrument_checkboxes[-1].setChecked(False)
+                        self.instrument_checkboxes[-1].blockSignals(False)
+                        if -1 in self.instrument_labels:
+                            self.instrument_labels[-1].setProperty("is_checked", False)
+                            self.instrument_labels[-1].setStyleSheet("color: #333333;")
+                    except RuntimeError:
+                        pass
+            else:
+                # 如果没有任何具体选项被选中，选中"全部"选项
+                if -1 in self.instrument_checkboxes:
+                    try:
+                        self.instrument_checkboxes[-1].blockSignals(True)
+                        self.instrument_checkboxes[-1].setChecked(True)
+                        self.instrument_checkboxes[-1].blockSignals(False)
+                        if -1 in self.instrument_labels:
+                            self.instrument_labels[-1].setProperty("is_checked", True)
+                            self.instrument_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+                    except RuntimeError:
+                        pass
+            
+            # 更新当前选项样式
+            if ins_cat in self.instrument_labels:
+                try:
+                    label = self.instrument_labels[ins_cat]
+                    label.setProperty("is_checked", is_checked)
+                    label.setStyleSheet("color: #4CAF50;" if is_checked else "color: #333333;")
+                except RuntimeError:
+                    pass
+        
+        self._update_instrument_text()
+        self._update_character_menu()
+    
+    def _on_character_checkbox_changed(self, nickname, state):
+        """人物复选框状态改变时的处理"""
+        try:
+            if nickname == -1:  # "全部"选项
+                if state == Qt.CheckState.Checked:
+                    # 如果选中"全部"，取消其他所有选项（使用blockSignals避免触发信号）
+                    for n, checkbox in list(self.character_checkboxes.items()):
+                        try:
+                            if n != -1:
+                                checkbox.blockSignals(True)
+                                checkbox.setChecked(False)
+                                checkbox.blockSignals(False)
+                                # 只更新标签样式，不触发其他复选框的更新
+                                if n in self.character_labels:
+                                    self.character_labels[n].setProperty("is_checked", False)
+                                    self.character_labels[n].setStyleSheet("color: #333333;")
+                        except RuntimeError:
+                            continue
+                    
+                    # 更新"全部"标签样式
+                    if -1 in self.character_labels:
+                        self.character_labels[-1].setProperty("is_checked", True)
+                        self.character_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+            else:  # 其他选项
+                is_checked = state == Qt.CheckState.Checked
+                # 检查是否有任何具体选项被选中
+                any_specific_checked = False
+                for n, checkbox in list(self.character_checkboxes.items()):
+                    try:
+                        if n != -1 and checkbox.isChecked():
+                            any_specific_checked = True
+                            break
+                    except RuntimeError:
+                        continue
+                
+                # 如果有任何具体选项被选中，取消"全部"选项
+                if any_specific_checked:
+                    if -1 in self.character_checkboxes:
+                        try:
+                            self.character_checkboxes[-1].blockSignals(True)
+                            self.character_checkboxes[-1].setChecked(False)
+                            self.character_checkboxes[-1].blockSignals(False)
+                            if -1 in self.character_labels:
+                                self.character_labels[-1].setProperty("is_checked", False)
+                                self.character_labels[-1].setStyleSheet("color: #333333;")
+                        except RuntimeError:
+                            pass
+                else:
+                    # 如果没有任何具体选项被选中，选中"全部"选项
+                    if -1 in self.character_checkboxes:
+                        try:
+                            self.character_checkboxes[-1].blockSignals(True)
+                            self.character_checkboxes[-1].setChecked(True)
+                            self.character_checkboxes[-1].blockSignals(False)
+                            if -1 in self.character_labels:
+                                self.character_labels[-1].setProperty("is_checked", True)
+                                self.character_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
+                        except RuntimeError:
+                            pass
+                
+                # 更新当前选项样式
+                if nickname in self.character_labels:
+                    try:
+                        label = self.character_labels[nickname]
+                        label.setProperty("is_checked", is_checked)
+                        label.setStyleSheet("color: #4CAF50;" if is_checked else "color: #333333;")
+                    except RuntimeError:
+                        pass
+            
+            self._update_character_text()
+        except RuntimeError:
+            # 对象已被删除，不更新文本
+            pass
 
     def _gather_selected_nicknames(self) -> list:
-        # 优先读取直接选中的人物
-        char_menu = self.character_select.menu()
+        """收集选中的昵称列表"""
         nicknames = []
-        for a in char_menu.actions():
-            if a.isCheckable() and a.isChecked():
-                data = a.data() or {}
-                if data.get('type') == 'character' and data.get('nickname'):
-                    nicknames.append(data['nickname'])
+        # 优先读取直接选中的人物
+        if hasattr(self, 'character_checkboxes'):
+            for nickname, checkbox in list(self.character_checkboxes.items()):
+                try:
+                    if nickname != -1 and checkbox.isChecked():
+                        nicknames.append(nickname)
+                except RuntimeError:
+                    # 对象已被删除，跳过
+                    continue
+        
         if nicknames:
             self.character_select.setCurrentText("已选人物: " + ", ".join(nicknames[:3]) + ("..." if len(nicknames) > 3 else ""))
             return nicknames
 
         # 若未选人物，按乐队/乐器自动选择
-        band_ids = set()
-        band_menu = self.band_select.menu()
-        for a in band_menu.actions():
-            if a.isCheckable() and a.isChecked():
-                data = a.data() or {}
-                if data.get('type') == 'band':
-                    band_ids.add(data.get('id'))
-        ins_cats = set()
-        if hasattr(self, 'instrument_select'):
-            ins_menu = self.instrument_select.menu()
-            for a in ins_menu.actions():
-                if a.isCheckable() and a.isChecked():
-                    data = a.data() or {}
-                    if data.get('type') == 'instrument' and data.get('cat'):
-                        ins_cats.add(data.get('cat'))
+        band_ids = self._get_selected_bands()
+        ins_cats = self._get_selected_instruments()
+        
         if band_ids or ins_cats:
             for ch in self._characters:
                 if ch.get('nickname'):
@@ -789,36 +1280,166 @@ class VoiceDownloadPage(QWidget):
             self.character_select.setCurrentText("人物(按筛选自动选择)")
         return nicknames
 
-    def _on_instrument_menu_changed(self, act):
-        """乐器菜单改变时的处理"""
-        self._update_instrument_text()
-        # 更新成员菜单以反映新的筛选条件
-        self._update_character_menu()
-
-    def _on_character_menu_changed(self, act):
-        self._update_character_text()
-
     def _update_band_text(self):
-        band_menu = self.band_select.menu()
-        names = [a.text() for a in band_menu.actions() if a.isCheckable() and a.isChecked()]
-        text = "已选乐队: " + ", ".join(names[:3]) + ("..." if len(names) > 3 else "") if names else "选择乐队 (可多选)"
-        self.band_select.setCurrentText(text)
+        """更新乐队选择文本"""
+        if hasattr(self, 'band_checkboxes') and hasattr(self, 'band_labels'):
+            # 检查是否只有"全部"选中
+            if -1 in self.band_checkboxes:
+                try:
+                    all_checked = self.band_checkboxes[-1].isChecked()
+                    if all_checked:
+                        # 检查是否有其他选项被选中
+                        any_specific_checked = False
+                        for band_id, checkbox in list(self.band_checkboxes.items()):
+                            try:
+                                if band_id != -1 and checkbox.isChecked():
+                                    any_specific_checked = True
+                                    break
+                            except RuntimeError:
+                                continue
+                        
+                        if not any_specific_checked:
+                            # 只有"全部"选中
+                            self.band_select.setCurrentText("全部乐队")
+                            return
+                except RuntimeError:
+                    pass
+            
+            names = []
+            for band_id, checkbox in list(self.band_checkboxes.items()):
+                try:
+                    if band_id != -1 and checkbox.isChecked():
+                        if band_id in self.band_labels:
+                            try:
+                                # 从label获取文本
+                                label_text = self.band_labels[band_id].text()
+                                names.append(label_text)
+                            except RuntimeError:
+                                # 对象已被删除，跳过
+                                continue
+                except RuntimeError:
+                    # 复选框对象已被删除，跳过
+                    continue
+            
+            if names:
+                if len(names) <= 2:
+                    text = ", ".join(names)
+                else:
+                    text = "已选乐队: " + ", ".join(names[:3]) + "..."
+            else:
+                text = "选择乐队 (可多选)"
+            self.band_select.setCurrentText(text)
+        else:
+            self.band_select.setCurrentText("选择乐队 (可多选)")
 
     def _update_instrument_text(self):
-        ins_menu = self.instrument_select.menu()
-        names = [a.text() for a in ins_menu.actions() if a.isCheckable() and a.isChecked()]
-        text = "已选乐器: " + ", ".join(names[:3]) + ("..." if len(names) > 3 else "") if names else "选择乐器 (可多选)"
-        self.instrument_select.setCurrentText(text)
+        """更新乐器选择文本"""
+        if hasattr(self, 'instrument_checkboxes') and hasattr(self, 'instrument_labels'):
+            # 检查是否只有"全部"选中
+            if -1 in self.instrument_checkboxes:
+                try:
+                    all_checked = self.instrument_checkboxes[-1].isChecked()
+                    if all_checked:
+                        # 检查是否有其他选项被选中
+                        any_specific_checked = False
+                        for ins_cat, checkbox in list(self.instrument_checkboxes.items()):
+                            try:
+                                if ins_cat != -1 and checkbox.isChecked():
+                                    any_specific_checked = True
+                                    break
+                            except RuntimeError:
+                                continue
+                        
+                        if not any_specific_checked:
+                            # 只有"全部"选中
+                            self.instrument_select.setCurrentText("全部乐器")
+                            return
+                except RuntimeError:
+                    pass
+            
+            names = []
+            for ins_cat, checkbox in list(self.instrument_checkboxes.items()):
+                try:
+                    if ins_cat != -1 and checkbox.isChecked():
+                        if ins_cat in self.instrument_labels:
+                            try:
+                                label_text = self.instrument_labels[ins_cat].text()
+                                names.append(label_text)
+                            except RuntimeError:
+                                # 对象已被删除，跳过
+                                continue
+                except RuntimeError:
+                    # 复选框对象已被删除，跳过
+                    continue
+            
+            if names:
+                if len(names) <= 2:
+                    text = ", ".join(names)
+                else:
+                    text = "已选乐器: " + ", ".join(names[:3]) + "..."
+            else:
+                text = "选择乐器 (可多选)"
+            self.instrument_select.setCurrentText(text)
+        else:
+            self.instrument_select.setCurrentText("选择乐器 (可多选)")
 
     def _update_character_text(self):
-        char_menu = self.character_select.menu()
-        names = []
-        for a in char_menu.actions():
-            d = a.data() or {}
-            if a.isCheckable() and a.isChecked() and d.get('type') == 'character':
-                names.append(a.text())
-        text = "已选人物: " + ", ".join(names[:3]) + ("..." if len(names) > 3 else "") if names else "选择人物 (可多选)"
-        self.character_select.setCurrentText(text)
+        """更新人物选择文本"""
+        if hasattr(self, 'character_checkboxes') and hasattr(self, 'character_labels'):
+            # 检查是否只有"全部"选中
+            if -1 in self.character_checkboxes:
+                try:
+                    all_checked = self.character_checkboxes[-1].isChecked()
+                    if all_checked:
+                        # 检查是否有其他选项被选中
+                        any_specific_checked = False
+                        for nickname, checkbox in list(self.character_checkboxes.items()):
+                            try:
+                                if nickname != -1 and checkbox.isChecked():
+                                    any_specific_checked = True
+                                    break
+                            except RuntimeError:
+                                continue
+                        
+                        if not any_specific_checked:
+                            # 只有"全部"选中
+                            self.character_select.setCurrentText("全部人物")
+                            return
+                except RuntimeError:
+                    pass
+            
+            names = []
+            for nickname, checkbox in list(self.character_checkboxes.items()):
+                try:
+                    # 检查对象是否仍然有效
+                    if nickname != -1 and checkbox.isChecked():
+                        if nickname in self.character_labels:
+                            label = self.character_labels[nickname]
+                            try:
+                                label_text = label.text()
+                                # 提取人物名称部分（格式：名称 (nickname)）
+                                if "(" in label_text:
+                                    name_part = label_text.split("(")[0].strip()
+                                    names.append(name_part)
+                                else:
+                                    names.append(label_text)
+                            except RuntimeError:
+                                # 对象已被删除，跳过
+                                continue
+                except RuntimeError:
+                    # 复选框对象已被删除，跳过
+                    continue
+            
+            if names:
+                if len(names) <= 2:
+                    text = ", ".join(names)
+                else:
+                    text = "已选人物: " + ", ".join(names[:3]) + "..."
+            else:
+                text = "选择人物 (可多选)"
+            self.character_select.setCurrentText(text)
+        else:
+            self.character_select.setCurrentText("选择人物 (可多选)")
 
     def _normalize_instrument(self, text: str) -> str:
         t = text.lower()
