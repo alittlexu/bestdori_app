@@ -124,7 +124,7 @@ USAGE_TEXT = """
 ABOUT_TEXT = """
 <h2>BanG Dream! 动态卡面视频下载工具</h2>
 
-<p><b>版本:</b> 2.1.2</p>
+<p><b>版本:</b> 2.1.3</p>
 <p><b>更新日期:</b> 2025年11月</p>
 
 <h3>📝 简介</h3>
@@ -176,7 +176,7 @@ ABOUT_TEXT = """
 
 <h3>📦 版本信息</h3>
 <ul>
-    <li><b>当前版本</b>: 2.1.2</li>
+    <li><b>当前版本</b>: 2.1.3</li>
     <li><b>主要功能</b>: 
         <ul>
             <li>卡面下载 - 高清PNG图片，支持normal和trained双形态</li>
@@ -221,7 +221,7 @@ ABOUT_TEXT = """
 <p>感谢 Bestdori 社区提供的数据支持，感谢所有 BanG Dream! 玩家的热爱与支持。</p>
 
 <p style="margin-top: 20px; color: #888; font-size: 12px;">
-© 2025 Bestdori Card Manager | 开发者: dx闹着玩的 | 版本 2.1.2
+© 2025 Bestdori Card Manager | 开发者: dx闹着玩的 | 版本 2.1.3
 </p>
 """
 

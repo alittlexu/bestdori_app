@@ -19,8 +19,9 @@ class ConfigManager:
             config_path = os.path.join(project_root, 'config', 'config.json')
         
         self.config_path = config_path
-        self.config = self._load_config()
+        # 先初始化 logger，因为 _load_config() 中可能会使用它
         self.logger = logging.getLogger('ConfigManager')
+        self.config = self._load_config()
     
     def _load_config(self):
         """加载配置文件"""
@@ -70,9 +71,15 @@ class ConfigManager:
                 os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
                 with open(self.config_path, 'w', encoding='utf-8') as f:
                     json.dump(default_config, f, ensure_ascii=False, indent=4)
-                self.logger.info(f"创建默认配置文件: {self.config_path}")
+                # 只有在 logger 已初始化时才记录日志
+                if hasattr(self, 'logger') and self.logger:
+                    self.logger.info(f"创建默认配置文件: {self.config_path}")
         except Exception as e:
-            self.logger.error(f"加载配置文件失败: {e}，使用默认配置")
+            # 只有在 logger 已初始化时才记录日志，否则使用 print
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"加载配置文件失败: {e}，使用默认配置")
+            else:
+                print(f"警告: 加载配置文件失败: {e}，使用默认配置")
         
         return default_config
     
