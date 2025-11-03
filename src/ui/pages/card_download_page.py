@@ -19,53 +19,100 @@ import json
 
 # 使用说明文本，您可以修改这部分来更新使用说明内容
 USAGE_TEXT = """
-<h2>BanG Dream! 卡面下载工具使用说明</h2>
+<h2>BanG Dream! 卡面下载工具 - 使用说明</h2>
 
-<h3>基本功能</h3>
-<p>本工具可以帮助您下载BanG Dream!游戏中各角色的卡面资源。</p>
+<h3>📖 基本功能</h3>
+<p>本工具可以帮助您从 Bestdori 网站下载 BanG Dream! 游戏中各角色的高清卡面图片资源。支持批量下载、智能筛选、自动分类保存等功能。</p>
 
-<h3>使用步骤</h3>
+<h3>🚀 快速开始</h3>
 <ol>
-    <li><b>筛选角色</b>: 通过乐队、乐器和角色三个下拉菜单进行筛选。
+    <li><b>设置下载路径</b>: 首次使用前，请点击"设置路径"按钮选择您希望保存卡片的根目录。
         <ul>
-            <li>您可以选择一个或多个乐队</li>
-            <li>您可以选择一个或多个乐器类型</li>
-            <li>您可以选择特定角色或使用"全部"选项</li>
+            <li>下载的文件将保存在：<code>&lt;您设置的路径&gt;/Bestdori/card/</code> 目录下</li>
+            <li>系统会自动创建乐队和角色子文件夹，例如：<code>Bestdori/card/Poppin_Party/ksm/</code></li>
+            <li>路径设置只需一次，之后会自动保存</li>
         </ul>
     </li>
-    <li><b>开始下载</b>: 点击"下载"按钮后，选择保存目录。
+    <li><b>筛选角色</b>: 使用三个下拉菜单进行精确筛选。
         <ul>
-            <li>系统将自动创建乐队文件夹和角色文件夹</li>
-            <li>例如：选择下载Poppin'Party的户山香澄，将创建"Poppin'Party/ksm/"目录结构</li>
+            <li><b>乐队筛选</b>: 选择要下载的乐队（如 Poppin'Party、Roselia 等）</li>
+            <li><b>乐器筛选</b>: 选择乐器类型（吉他、贝斯、鼓、键盘、主唱、DJ、小提琴）</li>
+            <li><b>角色筛选</b>: 选择具体的角色（支持多选，或选择"全部"）</li>
+            <li>所有筛选条件支持多选，通过勾选复选框实现</li>
+            <li>筛选菜单支持批量选择：点击选项后菜单保持打开，可连续选择多个选项</li>
+            <li>只有点击菜单外部区域或"确认选择"按钮时菜单才会关闭</li>
+            <li>鼠标悬停时显示手指针，提示可点击交互</li>
+            <li>筛选后点击菜单底部的"确认选择"按钮生效</li>
         </ul>
     </li>
-    <li><b>下载进度</b>: 下载过程中可以实时查看进度和状态。
+    <li><b>开始下载</b>: 设置好筛选条件后，点击粉色的"下载"按钮开始下载。
         <ul>
-            <li>进度条显示总体完成情况</li>
-            <li>状态文本显示当前下载卡片的ID和结果</li>
-            <li>日志区域记录详细下载历史</li>
+            <li>系统会自动验证每张卡片的有效性（检查图片分辨率）</li>
+            <li>同时下载正常形态（normal）和特训形态（trained）的卡片</li>
+            <li>如果某张卡片只有一种形态，也会自动下载可用的版本</li>
         </ul>
     </li>
-    <li><b>下载结果</b>: 下载完成后会显示统计信息。
+    <li><b>监控下载进度</b>: 下载过程中可以实时查看：
         <ul>
-            <li>显示成功下载的卡片数量(正常形态和特训形态)</li>
-            <li>显示失败或不存在的卡片信息</li>
+            <li><b>进度条</b>: 显示整体下载完成百分比</li>
+            <li><b>状态文本</b>: 显示当前处理的卡片ID、已下载数量、跳过数量等</li>
+            <li><b>日志区域</b>: 记录每张卡片的详细下载结果</li>
+            <li>如需中断下载，点击红色的"停止"按钮</li>
         </ul>
     </li>
-    <li><b>其他功能</b>:
+    <li><b>查看下载结果</b>: 下载完成后会弹出统计对话框：
         <ul>
-            <li>刷新按钮: 重置所有筛选条件，清空日志</li>
-            <li>停止按钮: 中断当前下载任务</li>
+            <li>完整下载（两种形态都成功）的卡片数量</li>
+            <li>仅正常形态或仅特训形态的卡片数量</li>
+            <li>下载失败的卡片信息</li>
+            <li>不存在的卡片ID列表</li>
         </ul>
     </li>
 </ol>
 
-<h3>注意事项</h3>
+<h3>🔧 功能按钮说明</h3>
 <ul>
-    <li>下载速度取决于您的网络连接</li>
-    <li>部分卡片可能只有特训形态或普通形态</li>
-    <li>如需下载大量卡片，建议分批进行</li>
+    <li><b>下载</b>（粉色）: 开始下载选中的角色卡面</li>
+    <li><b>刷新</b>（浅粉色）: 重置所有筛选条件，清空日志和状态</li>
+    <li><b>停止</b>（深粉红）: 中断当前正在进行的下载任务</li>
+    <li><b>设置路径</b>（浅粉色）: 设置或修改下载文件的保存根目录</li>
 </ul>
+
+<h3>💡 使用技巧</h3>
+<ul>
+    <li><b>批量下载</b>: 可以选择多个乐队、多个角色同时下载，系统会自动按文件夹分类保存</li>
+    <li><b>精确筛选</b>: 结合乐队、乐器、角色三个条件可以精确定位到某个特定角色</li>
+    <li><b>批量筛选</b>: 筛选菜单支持批量选择，点击选项后菜单不会关闭，可连续勾选多个选项，提高筛选效率</li>
+    <li><b>交互提示</b>: 鼠标悬停在可选项上会显示手指针，清晰提示可点击区域</li>
+    <li><b>断点续传</b>: 如果下载中断，可以重新启动，已下载的卡片会自动跳过</li>
+    <li><b>文件夹结构</b>: 所有卡面按照 <code>乐队名/角色昵称/</code> 的结构自动组织</li>
+    <li><b>路径管理</b>: 所有下载内容统一保存在 <code>Bestdori/</code> 文件夹下，便于统一管理</li>
+</ul>
+
+<h3>⚠️ 注意事项</h3>
+<ul>
+    <li><b>网络要求</b>: 下载速度取决于您的网络连接质量，建议在网络稳定时下载</li>
+    <li><b>存储空间</b>: 卡面图片较大，批量下载前请确保有足够的磁盘空间</li>
+    <li><b>下载策略</b>: 部分角色卡面数量较多，建议分批下载，避免单次下载时间过长</li>
+    <li><b>文件格式</b>: 所有卡面以 PNG 格式保存，保持原始画质</li>
+    <li><b>文件命名</b>: 卡片文件名格式为 <code>{卡片ID}_normal.png</code> 或 <code>{卡片ID}_trained.png</code></li>
+    <li><b>非法字符处理</b>: 系统会自动处理文件名中的非法字符（如 Pastel*Palettes 中的星号）</li>
+</ul>
+
+<h3>📁 文件保存位置</h3>
+<p>所有下载的卡面文件保存在以下目录结构中：</p>
+<pre>
+&lt;您设置的根路径&gt;/
+└── Bestdori/
+    └── card/                    # 卡面下载目录
+        ├── Poppin_Party/
+        │   ├── ksm/
+        │   │   ├── 1001_normal.png
+        │   │   ├── 1001_trained.png
+        │   │   └── ...
+        │   └── ...
+        └── ...
+</pre>
 """
 
 # 关于文本，您可以修改这部分来更新关于内容
@@ -103,37 +150,81 @@ def sanitize_filename(filename):
 ABOUT_TEXT = """
 <h2>BanG Dream! 卡面下载工具</h2>
 
-<p><b>版本:</b> 2.1.1</p>
+<p><b>版本:</b> 2.1.2</p>
+<p><b>更新日期:</b> 2025年11月</p>
 
-<p>本工具用于下载BanG Dream!游戏中的卡面资源，支持按乐队、乐器和角色进行筛选，并自动创建对应的文件夹结构。</p>
+<h3>📝 简介</h3>
+<p>Bestdori Card Manager 是一款专业的 BanG Dream! 游戏资源下载工具，提供友好的图形界面和强大的批量下载功能。本工具致力于帮助玩家便捷地获取和管理游戏中的高清卡面资源。</p>
 
-<p><b>卡面资源来源:</b> <a href="https://bestdori.com">Bestdori</a></p>
+<p><b>资源来源:</b> <a href="https://bestdori.com">Bestdori</a> - BanG Dream! 社区数据网站</p>
 
-<h3>支持的功能:</h3>
+<h3>✨ 核心功能</h3>
 <ul>
-    <li>按乐队、乐器和角色筛选下载</li>
-    <li>下载正常形态和特训形态卡面</li>
-    <li>自动创建乐队/角色文件夹结构</li>
-    <li>实时显示下载进度和状态</li>
-    <li>详细的下载日志记录</li>
+    <li><b>智能筛选</b>: 支持按乐队、乐器类型、角色进行多维度筛选，精确定位目标卡面</li>
+    <li><b>批量下载</b>: 一键批量下载多个角色的所有卡面，支持多选和"全部"选项</li>
+    <li><b>双形态支持</b>: 自动下载正常形态（normal）和特训形态（trained）两种版本的卡面</li>
+    <li><b>智能验证</b>: 自动验证图片分辨率，确保下载的是高质量卡面图片</li>
+    <li><b>自动分类</b>: 按乐队和角色自动创建文件夹结构，便于管理和查找</li>
+    <li><b>实时反馈</b>: 详细的进度显示、状态信息和下载日志，随时掌握下载情况</li>
+    <li><b>统一路径管理</b>: 所有下载资源（卡面、动态卡面、语音）统一保存在 <code>Bestdori/</code> 文件夹下</li>
+    <li><b>优化交互体验</b>: 筛选菜单支持批量选择，手指针提示，点击外部区域自动关闭菜单</li>
+    <li><b>文件处理</b>: 自动处理文件名非法字符，兼容 Windows 文件系统，避免路径错误</li>
 </ul>
 
-<h3>技术特点:</h3>
+<h3>🎨 界面特性</h3>
 <ul>
-    <li>使用PyQt6开发的现代化界面</li>
-    <li>多线程下载，保持UI响应性</li>
-    <li>智能卡面验证，确保下载图片质量</li>
-    <li>自动重试机制，提高下载成功率</li>
+    <li><b>现代化设计</b>: 采用粉色主题风格，界面美观统一，所有按钮和控件样式协调一致</li>
+    <li><b>响应式布局</b>: 自适应窗口大小，支持自由调整界面尺寸</li>
+    <li><b>多线程处理</b>: 后台下载不影响界面操作，保持流畅体验</li>
+    <li><b>清晰分类</b>: 功能模块化设计，卡面、动态卡面、语音下载、卡面预览分别管理</li>
+    <li><b>优化交互</b>: 筛选菜单支持批量选择，手指针提示，点击外部区域自动关闭</li>
+    <li><b>统一样式</b>: 所有下拉菜单、按钮样式统一，文字清晰可见，无黑色色块问题</li>
 </ul>
 
-<h3>注意事项:</h3>
+<h3>🛠️ 技术架构</h3>
 <ul>
-    <li>本工具仅用于个人学习和欣赏，请勿用于商业用途</li>
-    <li>下载的资源版权归BanG Dream!及Craft Egg/Bushiroad所有</li>
-    <li>如遇下载失败，请检查网络连接或稍后再试</li>
+    <li><b>开发框架</b>: PyQt6 - 跨平台图形界面框架，提供现代化UI组件</li>
+    <li><b>网络请求</b>: requests - 高效稳定的HTTP客户端，支持文件下载</li>
+    <li><b>图像处理</b>: Pillow - 图片格式验证和质量检查</li>
+    <li><b>多线程</b>: QThread - 异步下载，确保界面响应性</li>
+    <li><b>数据持久化</b>: JSON配置文件 - 保存用户设置和下载路径，支持配置管理</li>
+    <li><b>文件管理</b>: 自动处理文件名非法字符（包括全角字符），兼容 Windows 文件系统</li>
+    <li><b>路径管理</b>: 统一的路径工具和配置管理器，自动创建最佳目录结构</li>
+    <li><b>UI样式</b>: QSS样式表 - 统一的主题样式，支持自定义和扩展</li>
 </ul>
 
-<p>© dx闹着玩的</p>
+<h3>📦 版本信息</h3>
+<ul>
+    <li><b>当前版本</b>: 2.1.2</li>
+    <li><b>主要功能</b>: 
+        <ul>
+            <li>卡面下载 - 高清PNG图片，支持normal和trained双形态</li>
+            <li>动态卡面下载 - MP4视频格式，精美的动画效果</li>
+            <li>语音下载 - MP3音频格式，按乐队和角色分类</li>
+            <li>卡面预览 - 浏览和预览卡面资源</li>
+        </ul>
+    </li>
+    <li><b>支持格式</b>: PNG图片、MP4视频、MP3音频</li>
+    <li><b>操作系统</b>: Windows 10/11</li>
+    <li><b>Python版本</b>: 3.8 及以上</li>
+    <li><b>界面优化</b>: 统一的粉色主题、优化的筛选菜单交互、清晰的文字显示</li>
+</ul>
+
+<h3>⚠️ 使用须知</h3>
+<ul>
+    <li><b>使用目的</b>: 本工具仅用于个人学习、欣赏和研究，严禁用于任何商业用途</li>
+    <li><b>版权声明</b>: 所有下载的游戏资源版权归 BanG Dream! 及其版权方 Craft Egg/Bushiroad 所有</li>
+    <li><b>数据来源</b>: 资源来源于 Bestdori 社区网站，使用时请遵守该网站的使用条款</li>
+    <li><b>技术支持</b>: 如遇下载失败或异常，请检查网络连接、磁盘空间或稍后重试</li>
+    <li><b>问题反馈</b>: 如发现bug或需要新功能，欢迎通过项目仓库提交Issue</li>
+</ul>
+
+<h3>🙏 致谢</h3>
+<p>感谢 Bestdori 社区提供的数据支持，感谢所有 BanG Dream! 玩家的热爱与支持。</p>
+
+<p style="margin-top: 20px; color: #888; font-size: 12px;">
+© 2025 Bestdori Card Manager | 开发者: dx闹着玩的 | 版本 2.1.2
+</p>
 """
 
 
@@ -302,19 +393,27 @@ class MenuComboBox(QWidget):
             QToolButton { 
                 min-width: 150px; 
                 text-align: left; 
-                padding: 3px 20px 3px 3px; 
-                border: 1px solid #aaa;
-                border-radius: 3px;
-                background-color: #f8f8f8;
+                padding: 6px 20px 6px 8px; 
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                background-color: #FFFFFF;
+                color: #333333;
+                font-size: 13px;
             }
             QToolButton::menu-indicator { 
                 subcontrol-origin: padding;
                 subcontrol-position: center right;
-                margin-right: 5px;
+                margin-right: 8px;
+                width: 12px;
+                height: 12px;
             }
             QToolButton:hover { 
-                background-color: #e0e0e0;
-                border-color: #999;
+                background-color: #F5F7FA;
+                border-color: #E85D9E;
+            }
+            QToolButton:pressed {
+                background-color: #EDF1F5;
+                border-color: #D35490;
             }
         """)
         self.button.setSizePolicy(QComboBox().sizePolicy())
@@ -341,38 +440,76 @@ class MenuComboBox(QWidget):
         
         # 手指针样式已在主题样式中定义，这里添加基础样式并确保手指针生效
         # 注意：需要添加 cursor: pointer; 以确保手指针效果
+        # QMenu 默认支持：1) checkable action 点击后不关闭菜单；2) 点击外部区域关闭菜单
         self._menu.setStyleSheet("""
-            QMenu::item { 
-                padding: 8px; 
-                cursor: pointer;
+            QMenu {
+                background-color: white;
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                padding: 4px 0;
             }
-            QMenu::item:selected { 
-                background-color: #e0e0e0; 
+            QMenu::item { 
+                padding: 6px 32px 6px 8px;
+                color: #333333;
+                background: transparent;
+                min-height: 15px;
                 cursor: pointer;
             }
             QMenu::item:hover {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
                 cursor: pointer;
+            }
+            QMenu::item:selected { 
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:disabled {
+                cursor: default;
+            }
+            QMenu::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background: #FFFFFF;
+                margin-left: 8px;
+                margin-right: 8px;
+                cursor: pointer;
+            }
+            QMenu::indicator:checked {
+                background: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #F0F2F5;
+                margin: 4px 0;
             }
             QLabel {
                 padding: 3px 0;
+                color: #333333;
+                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
+                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
-                border: 1px solid #aaa;
-                border-radius: 3px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
                 background-color: white;
+                cursor: pointer;
             }
             QCheckBox::indicator:checked {
-                background-color: #4CAF50;
-                border-color: #4CAF50;
-                image: url(check.png);
+                background-color: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
             }
         """)
         
@@ -556,7 +693,22 @@ class CardDownloadPage(QWidget):
         
         # 设置路径按钮
         self.set_path_button = QPushButton("设置路径")
-        self.set_path_button.setStyleSheet("background-color: #2196F3; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.set_path_button.setStyleSheet("""
+            QPushButton {
+                background-color: #F8BBD9;
+                color: #333333;
+                padding: 6px 15px;
+                border-radius: 6px;
+                border: 1px solid #E5A5C5;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #F4A5CC;
+            }
+            QPushButton:pressed {
+                background-color: #E895B8;
+            }
+        """)
         self.set_path_button.clicked.connect(self.on_set_path_clicked)
         path_layout.addWidget(self.set_path_button)
         
@@ -606,21 +758,71 @@ class CardDownloadPage(QWidget):
         button_container = QHBoxLayout()
         button_layout.addLayout(button_container)
         
-        # 下载按钮
+        # 下载按钮（主按钮 - 主题粉色）
         self.download_button = QPushButton("下载")
-        self.download_button.setStyleSheet("background-color: #4CAF50; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.download_button.setStyleSheet("""
+            QPushButton {
+                background-color: #E85D9E;
+                color: #ffffff;
+                padding: 6px 15px;
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #D35490;
+            }
+            QPushButton:pressed {
+                background-color: #B3487D;
+            }
+            QPushButton:disabled {
+                background-color: #CCCCCC;
+                color: #666666;
+                border-color: #999999;
+            }
+        """)
         self.download_button.clicked.connect(self.on_filter_clicked)
         button_container.addWidget(self.download_button)
         
-        # 刷新按钮
+        # 刷新按钮（次要按钮 - 浅粉色）
         self.refresh_button = QPushButton("刷新")
-        self.refresh_button.setStyleSheet("background-color: #2196F3; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.refresh_button.setStyleSheet("""
+            QPushButton {
+                background-color: #F8BBD9;
+                color: #333333;
+                padding: 6px 15px;
+                border-radius: 6px;
+                border: 1px solid #E5A5C5;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #F4A5CC;
+            }
+            QPushButton:pressed {
+                background-color: #E895B8;
+            }
+        """)
         self.refresh_button.clicked.connect(self.on_refresh_clicked)
         button_container.addWidget(self.refresh_button)
         
-        # 停止按钮（初始隐藏）
+        # 停止按钮（危险按钮 - 深粉红）（初始隐藏）
         self.stop_button = QPushButton("停止")
-        self.stop_button.setStyleSheet("background-color: #F44336; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F;
+                color: #ffffff;
+                padding: 6px 15px;
+                border-radius: 6px;
+                border: 1px solid #B71C1C;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #C62828;
+            }
+            QPushButton:pressed {
+                background-color: #B71C1C;
+            }
+        """)
         self.stop_button.clicked.connect(self.on_stop_clicked)
         self.stop_button.setVisible(False)
         button_container.addWidget(self.stop_button)
@@ -695,35 +897,72 @@ class CardDownloadPage(QWidget):
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
-                border: 1px solid #aaa; 
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                padding: 4px 0;
             }
             QMenu::item { 
-                padding: 8px; 
+                padding: 6px 32px 6px 8px;
+                color: #333333;
+                background: transparent;
+                min-height: 15px;
+                cursor: pointer;
+            }
+            QMenu::item:hover {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
             }
             QMenu::item:selected { 
-                background-color: #e0e0e0; 
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:disabled {
+                cursor: default;
+            }
+            QMenu::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background: #FFFFFF;
+                margin-left: 8px;
+                margin-right: 8px;
+                cursor: pointer;
+            }
+            QMenu::indicator:checked {
+                background: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #F0F2F5;
+                margin: 4px 0;
             }
             QLabel {
                 padding: 3px 0;
                 color: #333333;
+                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
+                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
-                border: 1px solid #aaa;
-                border-radius: 3px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
                 background-color: white;
+                cursor: pointer;
             }
             QCheckBox::indicator:checked {
-                background-color: #4CAF50;
-                border-color: #4CAF50;
-                image: url(check.png);
+                background-color: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
             }
         """)
         
@@ -809,16 +1048,18 @@ class CardDownloadPage(QWidget):
         confirm_button = QPushButton("确认选择", confirm_widget)
         confirm_button.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50; 
+                background-color: #E85D9E; 
                 color: white; 
-                padding: 5px 15px; 
-                border-radius: 3px;
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #D35490;
             }
             QPushButton:pressed {
-                background-color: #3d8b40;
+                background-color: #B3487D;
             }
         """)
         confirm_button.clicked.connect(menu.hide)
@@ -858,35 +1099,72 @@ class CardDownloadPage(QWidget):
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
-                border: 1px solid #aaa; 
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                padding: 4px 0;
             }
             QMenu::item { 
-                padding: 8px; 
+                padding: 6px 32px 6px 8px;
+                color: #333333;
+                background: transparent;
+                min-height: 15px;
+                cursor: pointer;
+            }
+            QMenu::item:hover {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
             }
             QMenu::item:selected { 
-                background-color: #e0e0e0; 
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:disabled {
+                cursor: default;
+            }
+            QMenu::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background: #FFFFFF;
+                margin-left: 8px;
+                margin-right: 8px;
+                cursor: pointer;
+            }
+            QMenu::indicator:checked {
+                background: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #F0F2F5;
+                margin: 4px 0;
             }
             QLabel {
                 padding: 3px 0;
                 color: #333333;
+                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
+                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
-                border: 1px solid #aaa;
-                border-radius: 3px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
                 background-color: white;
+                cursor: pointer;
             }
             QCheckBox::indicator:checked {
-                background-color: #4CAF50;
-                border-color: #4CAF50;
-                image: url(check.png);
+                background-color: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
             }
         """)
         
@@ -971,16 +1249,18 @@ class CardDownloadPage(QWidget):
         confirm_button = QPushButton("确认选择", confirm_widget)
         confirm_button.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50; 
+                background-color: #E85D9E; 
                 color: white; 
-                padding: 5px 15px; 
-                border-radius: 3px;
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #D35490;
             }
             QPushButton:pressed {
-                background-color: #3d8b40;
+                background-color: #B3487D;
             }
         """)
         confirm_button.clicked.connect(menu.hide)
@@ -1022,35 +1302,72 @@ class CardDownloadPage(QWidget):
         menu.setStyleSheet("""
             QMenu { 
                 background-color: white; 
-                border: 1px solid #aaa; 
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                padding: 4px 0;
             }
             QMenu::item { 
-                padding: 8px; 
+                padding: 6px 32px 6px 8px;
+                color: #333333;
+                background: transparent;
+                min-height: 15px;
+                cursor: pointer;
+            }
+            QMenu::item:hover {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
             }
             QMenu::item:selected { 
-                background-color: #e0e0e0; 
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:disabled {
+                cursor: default;
+            }
+            QMenu::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background: #FFFFFF;
+                margin-left: 8px;
+                margin-right: 8px;
+                cursor: pointer;
+            }
+            QMenu::indicator:checked {
+                background: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #F0F2F5;
+                margin: 4px 0;
             }
             QLabel {
                 padding: 3px 0;
                 color: #333333;
+                cursor: pointer;
             }
             QLabel:hover {
                 color: #4CAF50;
             }
             QCheckBox {
                 spacing: 8px;
+                cursor: pointer;
             }
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
-                border: 1px solid #aaa;
-                border-radius: 3px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
                 background-color: white;
+                cursor: pointer;
             }
             QCheckBox::indicator:checked {
-                background-color: #4CAF50;
-                border-color: #4CAF50;
-                image: url(check.png);
+                background-color: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
             }
         """)
         
@@ -1135,16 +1452,18 @@ class CardDownloadPage(QWidget):
         confirm_button = QPushButton("确认选择", confirm_widget)
         confirm_button.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50; 
+                background-color: #E85D9E; 
                 color: white; 
-                padding: 5px 15px; 
-                border-radius: 3px;
+                padding: 6px 15px; 
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #D35490;
             }
             QPushButton:pressed {
-                background-color: #3d8b40;
+                background-color: #B3487D;
             }
         """)
         confirm_button.clicked.connect(menu.hide)
@@ -1579,12 +1898,13 @@ class CardDownloadPage(QWidget):
                 background-color: white;
             }
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #E85D9E;
                 color: white;
-                border: none;
-                border-radius: 4px;
+                border: 1px solid #C34E84;
+                border-radius: 6px;
                 padding: 8px 16px;
                 min-width: 80px;
+                font-weight: 500;
             }
             QPushButton:hover {
                 background-color: #45a049;
@@ -1670,12 +1990,13 @@ class CardDownloadPage(QWidget):
                 background-color: white;
             }
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #E85D9E;
                 color: white;
-                border: none;
-                border-radius: 4px;
+                border: 1px solid #C34E84;
+                border-radius: 6px;
                 padding: 8px 16px;
                 min-width: 80px;
+                font-weight: 500;
             }
             QPushButton:hover {
                 background-color: #45a049;

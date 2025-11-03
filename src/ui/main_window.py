@@ -18,7 +18,7 @@ from .background_manager import BackgroundManager
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Bestdori Card Manager v2.1.1 - 自适应版本")
+        self.setWindowTitle("Bestdori Card Manager v2.1.2 - 自适应版本")
         # 减小最小尺寸，允许用户将窗口缩小到更小的尺寸
         self.setMinimumSize(800, 600)
         

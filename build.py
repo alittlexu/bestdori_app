@@ -26,7 +26,7 @@ def clean_directories():
 def create_version_file():
     """创建版本信息文件"""
     print("生成版本信息...")
-    version = "2.1.1"
+    version = "2.1.2"
     build_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     with open('version.txt', 'w', encoding='utf-8') as f:
@@ -50,7 +50,7 @@ def build_executable():
     # PyInstaller命令参数
     cmd = [
         'pyinstaller',
-        'src/main.py',                      # 主程序入口
+        'run.py',                           # 主程序入口
         '--name=BanG Dream! 工具箱',        # 应用名称
         '--windowed',                       # GUI模式
         '--icon=assets/icons/bestdori.ico', # 应用图标
@@ -114,7 +114,7 @@ def create_archive():
         from datetime import datetime
         
         # 版本和日期信息
-        version = "2.1.1"
+        version = "2.1.2"
         date_str = datetime.now().strftime("%Y%m%d")
         
         # 压缩包名称
@@ -132,7 +132,7 @@ def create_archive():
             
             # 添加自述文件
             with open('README.txt', 'w', encoding='utf-8') as f:
-                f.write("BanG Dream! 工具箱 v2.1.1\n")
+                f.write("BanG Dream! 工具箱 v2.1.2\n")
                 f.write("==========================\n\n")
                 f.write("本工具用于下载BanG Dream!游戏中的卡面资源。\n\n")
                 f.write("使用方法:\n")

@@ -55,3 +55,22 @@ Thumbs.db
 # 项目历史记录（不推送到远程仓库）
 .specstory/
 specstory/
+
+# 构建产物和打包文件
+*.spec
+*.zip
+BanG_Dream_工具箱_v*/
+BanG_Dream_工具箱*.zip
+
+# 测试文件
+test_*.py
+test_*/
+downloadtest/
+test_downloads/
+
+# 状态文件
+tatus
+last_state.json
+
+# 开发工具脚本（已替换为 run.py）
+setup.py

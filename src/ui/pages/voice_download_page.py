@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar,
     QFileDialog, QFrame, QMessageBox, QScrollArea, QTabWidget, QGroupBox,
-    QListWidget, QListWidgetItem
+    QListWidget, QListWidgetItem, QApplication
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon
 try:
-    from src.gui.styles.theme import (
+    from src.ui.styles.theme import (
         get_common_styles, get_tabs_styles, get_groupbox_styles,
         get_voice_page_styles, build_stylesheet
     )
@@ -77,6 +77,78 @@ class VoiceDownloadPage(QWidget):
         self._instrument_cats = ['吉他', '贝斯', '鼓', '键盘', '主唱', 'DJ', '小提琴']
         self._bands = []
         self._characters = []
+        # 定义统一的菜单样式，供所有筛选菜单使用
+        self._menu_stylesheet = """
+            QMenu {
+                background-color: white;
+                border: 1px solid #E1E6EF;
+                border-radius: 6px;
+                padding: 4px 0;
+            }
+            QMenu::item {
+                padding: 6px 32px 6px 8px;
+                color: #333333;
+                background: transparent;
+                min-height: 15px;
+                cursor: pointer;
+            }
+            QMenu::item:hover {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:selected {
+                background: rgb(135, 206, 250);
+                color: #FFFFFF;
+                cursor: pointer;
+            }
+            QMenu::item:disabled {
+                cursor: default;
+            }
+            QMenu::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background: #FFFFFF;
+                margin-left: 8px;
+                margin-right: 8px;
+                cursor: pointer;
+            }
+            QMenu::indicator:checked {
+                background: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #F0F2F5;
+                margin: 4px 0;
+            }
+            QLabel {
+                padding: 3px 0;
+                color: #333333;
+                cursor: pointer;
+            }
+            QLabel:hover {
+                color: #4CAF50;
+            }
+            QCheckBox {
+                spacing: 8px;
+                cursor: pointer;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #E1E6EF;
+                border-radius: 4px;
+                background-color: white;
+                cursor: pointer;
+            }
+            QCheckBox::indicator:checked {
+                background-color: rgb(135, 206, 250);
+                border-color: rgb(135, 206, 250);
+            }
+            """
         self._init_ui()
         self._load_character_data()
         self._populate_filters()
@@ -114,9 +186,24 @@ class VoiceDownloadPage(QWidget):
         self.path_label.setWordWrap(True)
         path_layout.addWidget(self.path_label, 1)
         
-        # 设置路径按钮
+        # 设置路径按钮（次要按钮 - 浅粉色）
         self.set_path_button = QPushButton("设置路径")
-        self.set_path_button.setStyleSheet("background-color: #2196F3; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.set_path_button.setStyleSheet("""
+            QPushButton {
+                background-color: #F8BBD9;
+                color: #333333;
+                padding: 6px 15px;
+                border-radius: 6px;
+                border: 1px solid #E5A5C5;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #F4A5CC;
+            }
+            QPushButton:pressed {
+                background-color: #E895B8;
+            }
+        """)
         self.set_path_button.clicked.connect(self._on_set_path_clicked)
         path_layout.addWidget(self.set_path_button)
 
@@ -149,14 +236,46 @@ class VoiceDownloadPage(QWidget):
 
         filter_layout.addStretch(1)
         
-        # 重置筛选按钮
+        # 重置筛选按钮（次要按钮 - 浅粉色）
         self.reset_btn = QPushButton("重置筛选")
         self.reset_btn.setIcon(QIcon(os.path.join(icon_path, 'refresh.png')))
+        self.reset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #F8BBD9;
+                color: #333333;
+                padding: 6px 12px;
+                border-radius: 6px;
+                border: 1px solid #E5A5C5;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #F4A5CC;
+            }
+            QPushButton:pressed {
+                background-color: #E895B8;
+            }
+        """)
         self.reset_btn.clicked.connect(self._on_reset_filters)
         filter_layout.addWidget(self.reset_btn)
         
-        # 终止下载按钮（初始隐藏）
+        # 终止下载按钮（危险按钮 - 深粉红）（初始隐藏）
         self.stop_btn = QPushButton("终止下载")
+        self.stop_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F;
+                color: #ffffff;
+                padding: 6px 12px;
+                border-radius: 6px;
+                border: 1px solid #B71C1C;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #C62828;
+            }
+            QPushButton:pressed {
+                background-color: #B71C1C;
+            }
+        """)
         self.stop_btn.setVisible(False)
         self.stop_btn.clicked.connect(self._on_stop)
         filter_layout.addWidget(self.stop_btn)
@@ -176,15 +295,69 @@ class VoiceDownloadPage(QWidget):
         ctrl_row = QHBoxLayout()
         prog_layout.addLayout(ctrl_row)
         self.pause_all_btn = QPushButton("全部暂停")
+        self.pause_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F;
+                color: #ffffff;
+                padding: 6px 12px;
+                border-radius: 6px;
+                border: 1px solid #B71C1C;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #C62828;
+            }
+            QPushButton:pressed {
+                background-color: #B71C1C;
+            }
+        """)
         self.pause_all_btn.clicked.connect(self._on_stop)  # 暂以停止实现
         ctrl_row.addWidget(self.pause_all_btn)
         self.cancel_all_btn = QPushButton("全部取消")
+        self.cancel_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F;
+                color: #ffffff;
+                padding: 6px 12px;
+                border-radius: 6px;
+                border: 1px solid #B71C1C;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #C62828;
+            }
+            QPushButton:pressed {
+                background-color: #B71C1C;
+            }
+        """)
         self.cancel_all_btn.clicked.connect(self._on_stop)
         ctrl_row.addWidget(self.cancel_all_btn)
         ctrl_row.addStretch(1)
 
-        # 启动下载按钮放置在筛选与进度之间更直观
+        # 启动下载按钮（主按钮 - 主题粉色）放置在筛选与进度之间更直观
         self.start_btn = QPushButton("开始下载")
+        self.start_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #E85D9E;
+                color: #ffffff;
+                padding: 8px 20px;
+                border-radius: 6px;
+                border: 1px solid #C34E84;
+                font-weight: 500;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #D35490;
+            }
+            QPushButton:pressed {
+                background-color: #B3487D;
+            }
+            QPushButton:disabled {
+                background-color: #CCCCCC;
+                color: #666666;
+                border-color: #999999;
+            }
+        """)
         self.start_btn.clicked.connect(self._on_start)
         card_layout.addWidget(self.start_btn)
 
@@ -403,11 +576,24 @@ class VoiceDownloadPage(QWidget):
 
     def _populate_filters(self):
         # 乐队填充
+        # 注意：MenuComboBox 内部已经设置了完整的菜单样式（包括手指针效果）
+        # 我们只需要确保菜单对象名正确，样式会自动从 MenuComboBox 内部应用
         band_menu = self.band_select.menu()
         # 确保菜单对象名正确（apply样式）
         band_menu.setObjectName("FilterMenu")
-        # 应用主题样式（已在文件顶部导入，包含手指针和关闭行为样式）
-        # 样式已通过全局样式表应用，这里只需确保对象名正确
+        # 注意：MenuComboBox 内部已经设置了样式，我们不应该覆盖它
+        # 如果需要强制应用样式，在 aboutToShow 时重新设置
+        def ensure_band_menu_style():
+            # 在菜单显示前确保样式被应用
+            band_menu.setStyleSheet(self._menu_stylesheet)
+        # 先断开之前的连接（如果存在）
+        try:
+            band_menu.aboutToShow.disconnect()
+        except:
+            pass
+        band_menu.aboutToShow.connect(ensure_band_menu_style)
+        # 立即设置一次样式
+        band_menu.setStyleSheet(self._menu_stylesheet)
         band_menu.clear()
         for band in self._bands:
             act = band_menu.addAction(band.get('name') or '')
@@ -427,8 +613,19 @@ class VoiceDownloadPage(QWidget):
         ins_menu = self.instrument_select.menu()
         # 确保菜单对象名正确（apply样式）
         ins_menu.setObjectName("FilterMenu")
-        # 应用主题样式（已在文件顶部导入，包含手指针和关闭行为样式）
-        # 样式已通过全局样式表应用，这里只需确保对象名正确
+        # 注意：MenuComboBox 内部已经设置了样式，我们不应该覆盖它
+        # 如果需要强制应用样式，在 aboutToShow 时重新设置
+        def ensure_ins_menu_style():
+            # 在菜单显示前确保样式被应用
+            ins_menu.setStyleSheet(self._menu_stylesheet)
+        # 先断开之前的连接（如果存在）
+        try:
+            ins_menu.aboutToShow.disconnect()
+        except:
+            pass
+        ins_menu.aboutToShow.connect(ensure_ins_menu_style)
+        # 立即设置一次样式
+        ins_menu.setStyleSheet(self._menu_stylesheet)
         ins_menu.clear()
         for ins in self._instrument_cats:
             act = ins_menu.addAction(ins)
@@ -473,8 +670,19 @@ class VoiceDownloadPage(QWidget):
         char_menu = self.character_select.menu()
         # 确保菜单对象名正确（apply样式）
         char_menu.setObjectName("FilterMenu")
-        # 应用主题样式（已在文件顶部导入，包含手指针和关闭行为样式）
-        # 样式已通过全局样式表应用，这里只需确保对象名正确
+        # 注意：MenuComboBox 内部已经设置了样式，我们不应该覆盖它
+        # 如果需要强制应用样式，在 aboutToShow 时重新设置
+        def ensure_char_menu_style():
+            # 在菜单显示前确保样式被应用
+            char_menu.setStyleSheet(self._menu_stylesheet)
+        # 先断开之前的连接（如果存在）
+        try:
+            char_menu.aboutToShow.disconnect()
+        except:
+            pass
+        char_menu.aboutToShow.connect(ensure_char_menu_style)
+        # 立即设置一次样式
+        char_menu.setStyleSheet(self._menu_stylesheet)
         char_menu.clear()
         
         # 构建 band_id -> band_name 映射
