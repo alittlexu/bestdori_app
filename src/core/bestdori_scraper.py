@@ -23,7 +23,7 @@ except ImportError as e:
     print(f"Python路径: {sys.executable}")
     print(f"sys.path: {sys.path}")
 
-__version__ = "2.1.3"
+__version__ = "2.1.4"
 __author__ = "Findx"
 __description__ = "Bestdori卡面下载工具"
 
