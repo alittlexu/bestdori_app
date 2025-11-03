@@ -6,23 +6,21 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPoint, QEvent
 from PyQt6.QtGui import QAction, QPixmap, QMouseEvent
 from src.utils.database import DatabaseManager
-from src.core.cards.card_downloader import BestdoriDownloader
+from src.core.animation_episode.animation_episode_downloader import AnimationEpisodeDownloader
 from src.utils.config_manager import get_config_manager
 from src.utils.path_utils import ensure_download_path
 import os
 import requests
-from PIL import Image
-from io import BytesIO
 import time
 import logging
 import json
 
-# 使用说明文本，您可以修改这部分来更新使用说明内容
+# 使用说明文本
 USAGE_TEXT = """
-<h2>BanG Dream! 卡面下载工具使用说明</h2>
+<h2>BanG Dream! 动态卡面视频下载工具使用说明</h2>
 
 <h3>基本功能</h3>
-<p>本工具可以帮助您下载BanG Dream!游戏中各角色的卡面资源。</p>
+<p>本工具可以帮助您下载BanG Dream!游戏中各角色的动态卡面视频资源(mp4格式)。</p>
 
 <h3>使用步骤</h3>
 <ol>
@@ -42,14 +40,14 @@ USAGE_TEXT = """
     <li><b>下载进度</b>: 下载过程中可以实时查看进度和状态。
         <ul>
             <li>进度条显示总体完成情况</li>
-            <li>状态文本显示当前下载卡片的ID和结果</li>
+            <li>状态文本显示当前下载视频的ID和结果</li>
             <li>日志区域记录详细下载历史</li>
         </ul>
     </li>
     <li><b>下载结果</b>: 下载完成后会显示统计信息。
         <ul>
-            <li>显示成功下载的卡片数量(正常形态和特训形态)</li>
-            <li>显示失败或不存在的卡片信息</li>
+            <li>显示成功下载的视频数量</li>
+            <li>显示失败或不存在的视频信息</li>
         </ul>
     </li>
     <li><b>其他功能</b>:
@@ -63,12 +61,50 @@ USAGE_TEXT = """
 <h3>注意事项</h3>
 <ul>
     <li>下载速度取决于您的网络连接</li>
-    <li>部分卡片可能只有特训形态或普通形态</li>
-    <li>如需下载大量卡片，建议分批进行</li>
+    <li>动态卡面视频文件较大，请耐心等待</li>
+    <li>部分角色可能只有少量或没有动态卡面视频</li>
+    <li>如需下载大量视频，建议分批进行</li>
 </ul>
 """
 
-# 关于文本，您可以修改这部分来更新关于内容
+# 关于文本
+ABOUT_TEXT = """
+<h2>BanG Dream! 动态卡面视频下载工具</h2>
+
+<p><b>版本:</b> 2.1.0</p>
+
+<p>本工具用于下载BanG Dream!游戏中的动态卡面视频资源(mp4格式)，支持按乐队、乐器和角色进行筛选，并自动创建对应的文件夹结构。</p>
+
+<p><b>视频资源来源:</b> <a href="https://bestdori.com">Bestdori</a></p>
+
+<h3>支持的功能:</h3>
+<ul>
+    <li>按乐队、乐器和角色筛选下载</li>
+    <li>下载动态卡面视频文件(mp4格式)</li>
+    <li>自动创建乐队/角色文件夹结构</li>
+    <li>实时显示下载进度和状态</li>
+    <li>详细的下载日志记录</li>
+</ul>
+
+<h3>技术特点:</h3>
+<ul>
+    <li>使用PyQt6开发的现代化界面</li>
+    <li>多线程下载，保持UI响应性</li>
+    <li>智能视频验证，确保下载文件质量</li>
+    <li>自动重试机制，提高下载成功率</li>
+</ul>
+
+<h3>注意事项:</h3>
+<ul>
+    <li>本工具仅用于个人学习和欣赏，请勿用于商业用途</li>
+    <li>下载的资源版权归BanG Dream!及Craft Egg/Bushiroad所有</li>
+    <li>如遇下载失败，请检查网络连接或稍后再试</li>
+</ul>
+
+<p>© dx闹着玩的</p>
+"""
+
+
 def sanitize_filename(filename):
     """清理文件名中的非法字符（Windows文件系统）"""
     # Windows不允许的字符: < > : " / \ | ? * （包括全角和半角）
@@ -100,99 +136,55 @@ def sanitize_filename(filename):
     return filename
 
 
-ABOUT_TEXT = """
-<h2>BanG Dream! 卡面下载工具</h2>
-
-<p><b>版本:</b> 2.1.0</p>
-
-<p>本工具用于下载BanG Dream!游戏中的卡面资源，支持按乐队、乐器和角色进行筛选，并自动创建对应的文件夹结构。</p>
-
-<p><b>卡面资源来源:</b> <a href="https://bestdori.com">Bestdori</a></p>
-
-<h3>支持的功能:</h3>
-<ul>
-    <li>按乐队、乐器和角色筛选下载</li>
-    <li>下载正常形态和特训形态卡面</li>
-    <li>自动创建乐队/角色文件夹结构</li>
-    <li>实时显示下载进度和状态</li>
-    <li>详细的下载日志记录</li>
-</ul>
-
-<h3>技术特点:</h3>
-<ul>
-    <li>使用PyQt6开发的现代化界面</li>
-    <li>多线程下载，保持UI响应性</li>
-    <li>智能卡面验证，确保下载图片质量</li>
-    <li>自动重试机制，提高下载成功率</li>
-</ul>
-
-<h3>注意事项:</h3>
-<ul>
-    <li>本工具仅用于个人学习和欣赏，请勿用于商业用途</li>
-    <li>下载的资源版权归BanG Dream!及Craft Egg/Bushiroad所有</li>
-    <li>如遇下载失败，请检查网络连接或稍后再试</li>
-</ul>
-
-<p>© dx闹着玩的</p>
-"""
-
-
 class DownloadThread(QThread):
     """下载线程"""
     progress_updated = pyqtSignal(int)
     status_updated = pyqtSignal(str)
     download_completed = pyqtSignal(dict)
     
-    def __init__(self, characters, star=None, save_dir=None, character_id_mapping=None):
+    def __init__(self, characters, save_dir=None, character_id_mapping=None):
         super().__init__()
         self.characters = characters
-        self.star = star
         self.save_dir = save_dir
         self.character_id_mapping = character_id_mapping
-        self.downloader = BestdoriDownloader(save_dir)
+        self.downloader = AnimationEpisodeDownloader(save_dir)
         
-    def update_progress_callback(self, card_id, current, total, stats):
+    def update_progress_callback(self, video_id, current, total, stats):
         """更新进度回调"""
         progress = int((current / max(total, 1)) * 100)
         self.progress_updated.emit(progress)
         
-        # 创建当前卡片的状态信息
-        last_card_info = ""
+        # 创建当前视频的状态信息
+        last_video_info = ""
         nonexistent_count = len(stats["nonexistent"])
         
-        # 判断最后一次下载的卡片结果
+        # 判断最后一次下载的视频结果
         if current > 0:
-            if stats["complete"] > 0:
-                # 完整下载（两种形态都成功）
-                last_card_info = f"卡片 {card_id} 完整下载成功 (normal + trained形态)"
-            elif stats["normal_only"] > 0:
-                # 只有普通版本
-                last_card_info = f"卡片 {card_id} 仅normal形态下载成功"
-            elif stats["trained_only"] > 0:
-                # 只有特训版本
-                last_card_info = f"卡片 {card_id} 仅trained形态下载成功"
+            if stats["downloaded"] > 0:
+                # 下载成功
+                last_video_info = f"动态卡面视频 {video_id} 下载成功"
             elif stats["failed"] > 0:
                 # 下载失败
-                last_card_info = f"卡片 {card_id} 下载失败"
+                last_video_info = f"动态卡面视频 {video_id} 下载失败"
         
-        # 如果没有任何卡片下载信息，显示不存在的卡片信息
-        if not last_card_info and nonexistent_count > 0:
-            # 找到最后一个不存在的卡片ID
+        # 如果没有任何视频下载信息，显示不存在的视频信息
+        if not last_video_info and nonexistent_count > 0:
+            # 找到最后一个不存在的视频ID
             if stats["nonexistent"]:
                 last_nonexistent_id = stats["nonexistent"][-1]
-                last_card_info = f"卡片 {last_nonexistent_id} 不存在（未找到匹配1334x1002分辨率的图片），已跳过"
+                last_video_info = f"动态卡面视频 {last_nonexistent_id} 不存在，已跳过"
         
         # 构建状态文本
-        status_text = f"当前检查: 卡片ID {card_id} | 已下载: {current}张 | 已跳过: {nonexistent_count}张 | 进度: {progress}%"
-        if last_card_info:
-            status_text += f" | {last_card_info}"
+        status_text = f"当前检查: 视频ID {video_id} | 已下载: {current}个 | 已跳过: {nonexistent_count}个 | 进度: {progress}%"
+        if last_video_info:
+            status_text += f" | {last_video_info}"
             
         self.status_updated.emit(status_text)
         
     def run(self):
         """执行下载"""
         try:
-            total_cards_found = 0
+            total_videos_found = 0
             
             self.status_updated.emit("开始下载流程...")
             
@@ -202,7 +194,7 @@ class DownloadThread(QThread):
                     self.status_updated.emit(f"未找到角色 {char['id']} 的映射ID")
                     continue
                 
-                self.status_updated.emit(f"下载角色 {char['name']} 的卡片...")
+                self.status_updated.emit(f"下载角色 {char['name']} 的动态卡面视频...")
                 
                 # 获取角色所属乐队信息
                 band_name = None
@@ -241,29 +233,27 @@ class DownloadThread(QThread):
                     self.status_updated.emit(f"创建目录: {character_save_dir}")
                 
                 # 为当前角色创建专用的下载器实例，使用角色专属目录
-                char_downloader = BestdoriDownloader(character_save_dir)
+                char_downloader = AnimationEpisodeDownloader(character_save_dir)
                 
-                # 下载该角色的所有卡片
-                stats = char_downloader.download_character_cards(
+                # 下载该角色的所有动态卡面视频
+                stats = char_downloader.download_character_videos(
                     bestdori_id,
                     bestdori_id + 999,
                     self.update_progress_callback
                 )
                 
-                # 统计找到的卡片数量
-                total_cards_found += stats["complete"] + stats["normal_only"] + stats["trained_only"] + stats["failed"]
+                # 统计找到的视频数量
+                total_videos_found += stats["downloaded"] + stats["failed"]
                 
                 # 合并统计信息
-                self.downloader.stats["complete"] += stats["complete"]
-                self.downloader.stats["normal_only"] += stats["normal_only"]
-                self.downloader.stats["trained_only"] += stats["trained_only"]
+                self.downloader.stats["downloaded"] += stats["downloaded"]
                 self.downloader.stats["failed"] += stats["failed"]
                 self.downloader.stats["nonexistent"].extend(stats["nonexistent"])
             
-            if total_cards_found == 0:
+            if total_videos_found == 0:
                 self.download_completed.emit({
                     'success': False,
-                    'message': '未找到符合条件的卡片',
+                    'message': '未找到符合条件的动态卡面视频',
                     'nonexistent': self.downloader.stats["nonexistent"]
                 })
                 return
@@ -271,10 +261,8 @@ class DownloadThread(QThread):
             # 发送完成信号
             self.download_completed.emit({
                 'success': True,
-                'total': total_cards_found,
-                'complete': self.downloader.stats["complete"],
-                'normal_only': self.downloader.stats["normal_only"],
-                'trained_only': self.downloader.stats["trained_only"],
+                'total': total_videos_found,
+                'downloaded': self.downloader.stats["downloaded"],
                 'failed': self.downloader.stats["failed"],
                 'nonexistent': self.downloader.stats["nonexistent"]
             })
@@ -320,15 +308,11 @@ class MenuComboBox(QWidget):
         self.button.setSizePolicy(QComboBox().sizePolicy())
         layout.addWidget(self.button)
         
-        # 创建自定义菜单类，阻止菜单项点击后自动关闭
-        # QMenu 对于 checkable 的 action，默认不会关闭菜单
-        # 我们只需要确保菜单有正确的对象名以应用主题样式
+        # 创建自定义菜单类
         class NonClosingMenu(QMenu):
             def __init__(self, parent=None):
                 super().__init__(parent)
                 self.setObjectName("FilterMenu")
-                # 设置菜单不会在点击 checkable action 时关闭
-                # QMenu 默认已经支持这个行为
                 
             def keyPressEvent(self, event):
                 """重写键盘事件，ESC键关闭菜单"""
@@ -339,8 +323,6 @@ class MenuComboBox(QWidget):
         
         self._menu = NonClosingMenu(self)
         
-        # 手指针样式已在主题样式中定义，这里添加基础样式并确保手指针生效
-        # 注意：需要添加 cursor: pointer; 以确保手指针效果
         self._menu.setStyleSheet("""
             QMenu::item { 
                 padding: 8px; 
@@ -376,21 +358,16 @@ class MenuComboBox(QWidget):
             }
         """)
         
-        # 创建一个确认按钮，用于关闭菜单
-        # 注意：确认按钮不是 checkable 的，点击后会关闭菜单（这是默认行为）
+        # 创建一个确认按钮
         self.confirm_action = QAction("确认选择", self)
         self.confirm_action.triggered.connect(self._menu.hide)
         
-        # 连接菜单的triggered信号，用于处理菜单项点击（可选）
-        # 注意：对于 checkable 的 action，菜单不会自动关闭
         self._menu.triggered.connect(self._on_menu_item_triggered)
         
         self.button.setMenu(self._menu)
     
     def _on_menu_item_triggered(self, action):
         """处理菜单项触发"""
-        # 对于 checkable 的 action，QMenu 默认不会关闭菜单
-        # 对于确认按钮（非 checkable），会触发 hide() 关闭菜单
         pass
     
     def menu(self):
@@ -405,8 +382,8 @@ class MenuComboBox(QWidget):
         """获取当前显示的文本"""
         return self.button.text()
 
-class CardDownloadPage(QWidget):
-    """卡片下载页面"""
+class AnimationEpisodeDownloadPage(QWidget):
+    """动态卡面视频下载页面"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -488,7 +465,7 @@ class CardDownloadPage(QWidget):
         
     def init_character_mapping(self):
         """初始化角色ID映射"""
-        # 根据卡面ID规律，前三位是角色ID，这里映射数据库角色ID到Bestdori角色ID
+        # 根据视频ID规律，前三位是角色ID，这里映射数据库角色ID到Bestdori角色ID
         self.character_id_mapping = {
             1: 1000,    # 戸山香澄
             2: 2000,    # 花園たえ
@@ -576,7 +553,7 @@ class CardDownloadPage(QWidget):
         band_layout.addWidget(QLabel("乐队:"))
         self.band_combo = MenuComboBox("请选择乐队...")
         band_layout.addWidget(self.band_combo)
-        self.band_checkboxes = {}  # 存储乐队复选框
+        self.band_checkboxes = {}
         self.setup_band_menu()
         
         # 乐器选择
@@ -585,7 +562,7 @@ class CardDownloadPage(QWidget):
         instrument_layout.addWidget(QLabel("乐器:"))
         self.instrument_combo = MenuComboBox("请选择乐器...")
         instrument_layout.addWidget(self.instrument_combo)
-        self.instrument_checkboxes = {}  # 存储乐器复选框
+        self.instrument_checkboxes = {}
         self.setup_instrument_menu()
         
         # 角色选择
@@ -594,13 +571,13 @@ class CardDownloadPage(QWidget):
         character_layout.addWidget(QLabel("角色:"))
         self.character_combo = MenuComboBox("请选择角色...")
         character_layout.addWidget(self.character_combo)
-        self.character_checkboxes = {}  # 存储角色复选框
+        self.character_checkboxes = {}
         self.update_character_menu()
         
         # 按钮区域
         button_layout = QVBoxLayout()
         filter_layout.addLayout(button_layout)
-        button_layout.addWidget(QLabel(""))  # 占位符，对齐
+        button_layout.addWidget(QLabel(""))  # 占位符
         
         # 按钮容器
         button_container = QHBoxLayout()
@@ -625,7 +602,7 @@ class CardDownloadPage(QWidget):
         self.stop_button.setVisible(False)
         button_container.addWidget(self.stop_button)
         
-        # 添加一个分隔器
+        # 添加分隔器
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
@@ -635,14 +612,14 @@ class CardDownloadPage(QWidget):
         content_layout = QVBoxLayout()
         main_layout.addLayout(content_layout)
         
-        # 上层区域 - 预留空间，暂不显示内容
+        # 上层区域 - 预留空间
         self.upper_area = QFrame()
         self.upper_area.setMinimumHeight(200)
         self.upper_area.setFrameShape(QFrame.Shape.StyledPanel)
         self.upper_area.setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border-radius: 5px;")
         content_layout.addWidget(self.upper_area)
         
-        # 添加一个分隔器
+        # 添加分隔器
         line2 = QFrame()
         line2.setFrameShape(QFrame.Shape.HLine)
         line2.setFrameShadow(QFrame.Shadow.Sunken)
@@ -684,8 +661,6 @@ class CardDownloadPage(QWidget):
     
     def setup_band_menu(self):
         """设置乐队下拉菜单"""
-        # 使用自定义菜单类，支持手指针和点击外部关闭
-        # 注意：QMenu 默认支持点击外部关闭，我们只需要设置对象名以应用主题样式
         class FilterMenu(QMenu):
             def __init__(self, parent=None):
                 super().__init__(parent)
@@ -727,24 +702,20 @@ class CardDownloadPage(QWidget):
             }
         """)
         
-        # 创建一个控件容器来包含"全部"选项
+        # 创建全部选项
         all_widget = QWidget(menu)
         all_layout = QHBoxLayout(all_widget)
         all_layout.setContentsMargins(8, 4, 8, 4)
         
-        # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
         all_layout.addWidget(all_checkbox)
         
-        # 创建标签并使其可点击
         all_label = QLabel("全部", all_widget)
-        all_label.setProperty("is_checked", True)  # 用属性标记是否选中
-        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")  # 默认选中状态
-        # 使用Qt.CursorShape枚举设置鼠标指针
+        all_label.setProperty("is_checked", True)
+        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
         all_label.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        # 修复lambda闭包问题
         def create_click_handler(cb):
             return lambda e: self.toggle_checkbox(cb)
             
@@ -752,52 +723,44 @@ class CardDownloadPage(QWidget):
         all_layout.addWidget(all_label)
         all_layout.addStretch()
         
-        # 将控件包装在QWidgetAction中
         all_action = QWidgetAction(menu)
         all_action.setDefaultWidget(all_widget)
         menu.addAction(all_action)
         
         menu.addSeparator()
         
-        # 存储所有复选框和它们的动作
+        # 存储复选框
         self.band_checkboxes = {-1: all_checkbox}
         self.band_actions = {-1: all_action}
         self.band_labels = {-1: all_label}
         
-        # 连接信号
         all_checkbox.stateChanged.connect(lambda state: self.on_band_checkbox_changed(-1, state))
         
-        # 添加每个乐队的复选框
+        # 添加每个乐队
         for band in self.bands:
-            # 创建控件和布局
             band_widget = QWidget(menu)
             band_layout = QHBoxLayout(band_widget)
             band_layout.setContentsMargins(8, 4, 8, 4)
             
-            # 创建复选框
             checkbox = QCheckBox(band_widget)
             band_layout.addWidget(checkbox)
             
-            # 创建标签并使其可点击
             label = QLabel(band['name'], band_widget)
             label.setCursor(Qt.CursorShape.PointingHandCursor)
-            label.setProperty("is_checked", False)  # 默认未选中
-            label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+            label.setProperty("is_checked", False)
+            label.setStyleSheet("color: #333333;")
             label.mousePressEvent = create_click_handler(checkbox)
             band_layout.addWidget(label)
             band_layout.addStretch()
             
-            # 创建动作并添加到菜单
             action = QWidgetAction(menu)
             action.setDefaultWidget(band_widget)
             menu.addAction(action)
             
-            # 存储引用
             self.band_checkboxes[band['id']] = checkbox
             self.band_actions[band['id']] = action
             self.band_labels[band['id']] = label
             
-            # 连接信号
             checkbox.stateChanged.connect(lambda state, b_id=band['id']: self.on_band_checkbox_changed(b_id, state))
         
         # 添加确认按钮
@@ -828,10 +791,7 @@ class CardDownloadPage(QWidget):
         confirm_action.setDefaultWidget(confirm_widget)
         menu.addAction(confirm_action)
         
-        # 设置菜单给下拉框
         self.band_combo.button.setMenu(menu)
-        
-        # 更新下拉框文本
         self.update_band_combo_text()
     
     def toggle_checkbox(self, checkbox):
@@ -840,19 +800,10 @@ class CardDownloadPage(QWidget):
     
     def setup_instrument_menu(self):
         """设置乐器下拉菜单"""
-        # 使用自定义菜单类，支持手指针和点击外部关闭
         class FilterMenu(QMenu):
             def __init__(self, parent=None):
                 super().__init__(parent)
                 self.setObjectName("FilterMenu")
-            
-            def mousePressEvent(self, event):
-                """重写鼠标点击事件，点击菜单外部时关闭"""
-                if event.button() == Qt.MouseButton.LeftButton:
-                    if not self.rect().contains(event.pos()):
-                        self.hide()
-                        return
-                super().mousePressEvent(event)
         
         menu = FilterMenu(self)
         menu.setStyleSheet("""
@@ -890,23 +841,20 @@ class CardDownloadPage(QWidget):
             }
         """)
         
-        # 创建一个控件容器来包含复选框
+        # 创建全部选项
         all_widget = QWidget(menu)
         all_layout = QHBoxLayout(all_widget)
         all_layout.setContentsMargins(8, 4, 8, 4)
         
-        # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
         all_layout.addWidget(all_checkbox)
         
-        # 创建标签并使其可点击
         all_label = QLabel("全部", all_widget)
         all_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        all_label.setProperty("is_checked", True)  # 用属性标记是否选中
-        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")  # 默认选中状态
+        all_label.setProperty("is_checked", True)
+        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
         
-        # 修复lambda闭包问题
         def create_click_handler(cb):
             return lambda e: self.toggle_checkbox(cb)
             
@@ -914,52 +862,43 @@ class CardDownloadPage(QWidget):
         all_layout.addWidget(all_label)
         all_layout.addStretch()
         
-        # 将控件包装在QWidgetAction中
         all_action = QWidgetAction(menu)
         all_action.setDefaultWidget(all_widget)
         menu.addAction(all_action)
         
         menu.addSeparator()
         
-        # 存储所有复选框和它们的动作
         self.instrument_checkboxes = {-1: all_checkbox}
         self.instrument_actions = {-1: all_action}
         self.instrument_labels = {-1: all_label}
         
-        # 连接信号
         all_checkbox.stateChanged.connect(lambda state: self.on_instrument_checkbox_changed(-1, state))
         
-        # 添加每个乐器的复选框
+        # 添加每个乐器
         for instrument in self.instruments:
-            # 创建控件和布局
             instrument_widget = QWidget(menu)
             instrument_layout = QHBoxLayout(instrument_widget)
             instrument_layout.setContentsMargins(8, 4, 8, 4)
             
-            # 创建复选框
             checkbox = QCheckBox(instrument_widget)
             instrument_layout.addWidget(checkbox)
             
-            # 创建标签并使其可点击
             label = QLabel(instrument['name'], instrument_widget)
             label.setCursor(Qt.CursorShape.PointingHandCursor)
-            label.setProperty("is_checked", False)  # 默认未选中
-            label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+            label.setProperty("is_checked", False)
+            label.setStyleSheet("color: #333333;")
             label.mousePressEvent = create_click_handler(checkbox)
             instrument_layout.addWidget(label)
             instrument_layout.addStretch()
             
-            # 创建动作并添加到菜单
             action = QWidgetAction(menu)
             action.setDefaultWidget(instrument_widget)
             menu.addAction(action)
             
-            # 存储引用
             self.instrument_checkboxes[instrument['id']] = checkbox
             self.instrument_actions[instrument['id']] = action
             self.instrument_labels[instrument['id']] = label
             
-            # 连接信号
             checkbox.stateChanged.connect(lambda state, i_id=instrument['id']: self.on_instrument_checkbox_changed(i_id, state))
         
         # 添加确认按钮
@@ -990,34 +929,20 @@ class CardDownloadPage(QWidget):
         confirm_action.setDefaultWidget(confirm_widget)
         menu.addAction(confirm_action)
         
-        # 设置菜单给下拉框
         self.instrument_combo.button.setMenu(menu)
-        
-        # 更新下拉框文本
         self.update_instrument_combo_text()
     
     def update_character_menu(self):
         """更新角色下拉菜单"""
-        # 获取当前筛选条件下的角色
         band_ids = self.get_selected_band_ids()
         instrument_ids = self.get_selected_instrument_ids()
         characters = self.get_filtered_characters(band_ids, instrument_ids)
         
-        # 使用自定义菜单类，支持手指针和点击外部关闭
         class FilterMenu(QMenu):
             def __init__(self, parent=None):
                 super().__init__(parent)
                 self.setObjectName("FilterMenu")
-            
-            def mousePressEvent(self, event):
-                """重写鼠标点击事件，点击菜单外部时关闭"""
-                if event.button() == Qt.MouseButton.LeftButton:
-                    if not self.rect().contains(event.pos()):
-                        self.hide()
-                        return
-                super().mousePressEvent(event)
         
-        # 创建菜单
         menu = FilterMenu(self)
         menu.setStyleSheet("""
             QMenu { 
@@ -1054,23 +979,20 @@ class CardDownloadPage(QWidget):
             }
         """)
         
-        # 创建一个控件容器来包含复选框
+        # 创建全部选项
         all_widget = QWidget(menu)
         all_layout = QHBoxLayout(all_widget)
         all_layout.setContentsMargins(8, 4, 8, 4)
         
-        # 创建全选复选框
         all_checkbox = QCheckBox(all_widget)
         all_checkbox.setChecked(True)
         all_layout.addWidget(all_checkbox)
         
-        # 创建标签并使其可点击
         all_label = QLabel("全部", all_widget)
         all_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        all_label.setProperty("is_checked", True)  # 用属性标记是否选中
-        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")  # 默认选中状态
+        all_label.setProperty("is_checked", True)
+        all_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
         
-        # 修复lambda闭包问题
         def create_click_handler(cb):
             return lambda e: self.toggle_checkbox(cb)
         
@@ -1078,52 +1000,43 @@ class CardDownloadPage(QWidget):
         all_layout.addWidget(all_label)
         all_layout.addStretch()
         
-        # 将控件包装在QWidgetAction中
         all_action = QWidgetAction(menu)
         all_action.setDefaultWidget(all_widget)
         menu.addAction(all_action)
         
         menu.addSeparator()
         
-        # 存储复选框和动作
         self.character_checkboxes = {-1: all_checkbox}
         self.character_actions = {-1: all_action}
         self.character_labels = {-1: all_label}
         
-        # 连接信号
         all_checkbox.stateChanged.connect(lambda state: self.on_character_checkbox_changed(-1, state))
         
-        # 添加每个角色选项
+        # 添加每个角色
         for character in characters:
-            # 创建控件和布局
             character_widget = QWidget(menu)
             character_layout = QHBoxLayout(character_widget)
             character_layout.setContentsMargins(8, 4, 8, 4)
             
-            # 创建复选框
             checkbox = QCheckBox(character_widget)
             character_layout.addWidget(checkbox)
             
-            # 创建标签并使其可点击
             label = QLabel(character['name'], character_widget)
             label.setCursor(Qt.CursorShape.PointingHandCursor)
-            label.setProperty("is_checked", False)  # 默认未选中
-            label.setStyleSheet("color: #333333;")  # 默认未选中状态使用黑色
+            label.setProperty("is_checked", False)
+            label.setStyleSheet("color: #333333;")
             label.mousePressEvent = create_click_handler(checkbox)
             character_layout.addWidget(label)
             character_layout.addStretch()
             
-            # 创建动作并添加到菜单
             action = QWidgetAction(menu)
             action.setDefaultWidget(character_widget)
             menu.addAction(action)
             
-            # 存储引用
             self.character_checkboxes[character['id']] = checkbox
             self.character_actions[character['id']] = action
             self.character_labels[character['id']] = label
             
-            # 连接信号
             checkbox.stateChanged.connect(lambda state, c_id=character['id']: self.on_character_checkbox_changed(c_id, state))
         
         # 添加确认按钮
@@ -1154,47 +1067,37 @@ class CardDownloadPage(QWidget):
         confirm_action.setDefaultWidget(confirm_widget)
         menu.addAction(confirm_action)
         
-        # 设置菜单给下拉框
         self.character_combo.button.setMenu(menu)
-        
-        # 更新下拉框文本
         self.update_character_combo_text()
     
     def on_band_checkbox_changed(self, band_id, state):
         """乐队复选框改变处理"""
         if band_id == -1:  # "全部"选项
             if state == Qt.CheckState.Checked:
-                # 如果选中"全部"，取消其他所有选项
                 for id, checkbox in self.band_checkboxes.items():
                     if id != -1:
                         checkbox.setChecked(False)
-                        # 更新标签样式
                         self.band_labels[id].setProperty("is_checked", False)
                         self.band_labels[id].setStyleSheet("color: #333333;")
                 
-                # 更新"全部"标签样式
                 self.band_labels[-1].setProperty("is_checked", True)
                 self.band_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
         else:  # 其他选项
-            # 检查是否有任何具体选项被选中
             any_specific_checked = False
             for id, checkbox in self.band_checkboxes.items():
                 if id != -1 and checkbox.isChecked():
                     any_specific_checked = True
                     break
             
-            # 如果有任何具体选项被选中，取消"全部"选项
             if any_specific_checked:
                 self.band_checkboxes[-1].setChecked(False)
                 self.band_labels[-1].setProperty("is_checked", False)
                 self.band_labels[-1].setStyleSheet("color: #333333;")
             else:
-                # 如果没有任何具体选项被选中，选中"全部"选项
                 self.band_checkboxes[-1].setChecked(True)
                 self.band_labels[-1].setProperty("is_checked", True)
                 self.band_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
             
-            # 更新当前选项样式
             if state == Qt.CheckState.Checked:
                 self.band_labels[band_id].setProperty("is_checked", True)
                 self.band_labels[band_id].setStyleSheet("color: #4CAF50; font-weight: bold;")
@@ -1202,47 +1105,37 @@ class CardDownloadPage(QWidget):
                 self.band_labels[band_id].setProperty("is_checked", False)
                 self.band_labels[band_id].setStyleSheet("color: #333333;")
         
-        # 更新下拉框文本
         self.update_band_combo_text()
-        
-        # 更新角色菜单
         self.update_character_menu()
     
     def on_instrument_checkbox_changed(self, instrument_id, state):
         """乐器复选框改变处理"""
         if instrument_id == -1:  # "全部"选项
             if state == Qt.CheckState.Checked:
-                # 如果选中"全部"，取消其他所有选项
                 for id, checkbox in self.instrument_checkboxes.items():
                     if id != -1:
                         checkbox.setChecked(False)
-                        # 更新标签样式
                         self.instrument_labels[id].setProperty("is_checked", False)
                         self.instrument_labels[id].setStyleSheet("color: #333333;")
                 
-                # 更新"全部"标签样式
                 self.instrument_labels[-1].setProperty("is_checked", True)
                 self.instrument_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
         else:  # 其他选项
-            # 检查是否有任何具体选项被选中
             any_specific_checked = False
             for id, checkbox in self.instrument_checkboxes.items():
                 if id != -1 and checkbox.isChecked():
                     any_specific_checked = True
                     break
             
-            # 如果有任何具体选项被选中，取消"全部"选项
             if any_specific_checked:
                 self.instrument_checkboxes[-1].setChecked(False)
                 self.instrument_labels[-1].setProperty("is_checked", False)
                 self.instrument_labels[-1].setStyleSheet("color: #333333;")
             else:
-                # 如果没有任何具体选项被选中，选中"全部"选项
                 self.instrument_checkboxes[-1].setChecked(True)
                 self.instrument_labels[-1].setProperty("is_checked", True)
                 self.instrument_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
             
-            # 更新当前选项样式
             if state == Qt.CheckState.Checked:
                 self.instrument_labels[instrument_id].setProperty("is_checked", True)
                 self.instrument_labels[instrument_id].setStyleSheet("color: #4CAF50; font-weight: bold;")
@@ -1250,47 +1143,37 @@ class CardDownloadPage(QWidget):
                 self.instrument_labels[instrument_id].setProperty("is_checked", False)
                 self.instrument_labels[instrument_id].setStyleSheet("color: #333333;")
         
-        # 更新下拉框文本
         self.update_instrument_combo_text()
-        
-        # 更新角色菜单
         self.update_character_menu()
     
     def on_character_checkbox_changed(self, character_id, state):
         """角色复选框改变处理"""
         if character_id == -1:  # "全部"选项
             if state == Qt.CheckState.Checked:
-                # 如果选中"全部"，取消其他所有选项
                 for id, checkbox in self.character_checkboxes.items():
                     if id != -1:
                         checkbox.setChecked(False)
-                        # 更新标签样式
                         self.character_labels[id].setProperty("is_checked", False)
                         self.character_labels[id].setStyleSheet("color: #333333;")
                 
-                # 更新"全部"标签样式
                 self.character_labels[-1].setProperty("is_checked", True)
                 self.character_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
         else:  # 其他选项
-            # 检查是否有任何具体选项被选中
             any_specific_checked = False
             for id, checkbox in self.character_checkboxes.items():
                 if id != -1 and checkbox.isChecked():
                     any_specific_checked = True
                     break
             
-            # 如果有任何具体选项被选中，取消"全部"选项
             if any_specific_checked:
                 self.character_checkboxes[-1].setChecked(False)
                 self.character_labels[-1].setProperty("is_checked", False)
                 self.character_labels[-1].setStyleSheet("color: #333333;")
             else:
-                # 如果没有任何具体选项被选中，选中"全部"选项
                 self.character_checkboxes[-1].setChecked(True)
                 self.character_labels[-1].setProperty("is_checked", True)
                 self.character_labels[-1].setStyleSheet("color: #4CAF50; font-weight: bold;")
             
-            # 更新当前选项样式
             if state == Qt.CheckState.Checked:
                 self.character_labels[character_id].setProperty("is_checked", True)
                 self.character_labels[character_id].setStyleSheet("color: #4CAF50; font-weight: bold;")
@@ -1298,7 +1181,6 @@ class CardDownloadPage(QWidget):
                 self.character_labels[character_id].setProperty("is_checked", False)
                 self.character_labels[character_id].setStyleSheet("color: #333333;")
         
-        # 更新下拉框文本
         self.update_character_combo_text()
     
     def update_band_combo_text(self):
@@ -1351,20 +1233,17 @@ class CardDownloadPage(QWidget):
     
     def on_refresh_clicked(self):
         """处理刷新按钮点击事件"""
-        # 终止当前下载任务
         self.on_stop_clicked()
         
         # 重置所有复选框
         for id, checkbox in self.band_checkboxes.items():
-            checkbox.setChecked(id == -1)  # 仅选中"全部"
+            checkbox.setChecked(id == -1)
             
         for id, checkbox in self.instrument_checkboxes.items():
-            checkbox.setChecked(id == -1)  # 仅选中"全部"
+            checkbox.setChecked(id == -1)
             
-        # 更新角色菜单
         self.update_character_menu()
         
-        # 刷新下拉框文本
         self.update_band_combo_text()
         self.update_instrument_combo_text()
         self.update_character_combo_text()
@@ -1375,31 +1254,24 @@ class CardDownloadPage(QWidget):
             if item.widget():
                 item.widget().deleteLater()
         
-        # 重置进度条和状态
         self.progress_bar.setVisible(False)
         self.status_label.setText("")
         
-        # 重新启用下载按钮
         self.download_button.setEnabled(True)
         self.stop_button.setVisible(False)
         
-        # 添加刷新日志
         self.add_log_entry("界面已重置", True)
     
     def on_stop_clicked(self):
         """处理停止按钮点击事件"""
-        # 如果有活动的下载线程
         if hasattr(self, 'download_thread') and self.download_thread.isRunning():
-            # 终止线程
             self.download_thread.terminate()
             self.download_thread.wait()
             
-            # 更新UI状态
             self.download_button.setEnabled(True)
             self.stop_button.setVisible(False)
             self.progress_bar.setVisible(False)
             
-            # 添加停止日志
             self.add_log_entry("下载已停止", False)
             QMessageBox.information(self, "下载停止", "下载任务已终止")
             
@@ -1425,8 +1297,8 @@ class CardDownloadPage(QWidget):
             
             # 检查是否设置了下载根路径
             try:
-                # 使用新的路径结构：<root>/Bestdori/card/
-                save_dir = ensure_download_path('card')
+                # 使用新的路径结构：<root>/Bestdori/animation/
+                save_dir = ensure_download_path('animation')
                 self.add_log_entry(f"保存目录: {save_dir}")
             except ValueError as e:
                 QMessageBox.warning(self, "路径未设置", f"{str(e)}\n\n请先点击\"设置路径\"按钮设置下载根路径。")
@@ -1438,7 +1310,6 @@ class CardDownloadPage(QWidget):
             # 创建并启动下载线程
             self.download_thread = DownloadThread(
                 characters=characters,
-                star=None,  # 移除星级筛选
                 save_dir=save_dir,
                 character_id_mapping=self.character_id_mapping
             )
@@ -1472,7 +1343,6 @@ class CardDownloadPage(QWidget):
     def update_status(self, text):
         """更新状态文本"""
         self.status_label.setText(text)
-        # 同时添加到日志
         self.add_log_entry(text)
     
     def add_log_entry(self, text, success=None):
@@ -1484,10 +1354,7 @@ class CardDownloadPage(QWidget):
             else:
                 log_entry.setStyleSheet("color: red;")
         
-        # 将新日志添加到顶部
         self.log_layout.insertWidget(0, log_entry)
-        
-        # 自动滚动到顶部
         self.log_area.verticalScrollBar().setValue(0)
     
     def on_download_completed(self, result):
@@ -1497,28 +1364,24 @@ class CardDownloadPage(QWidget):
         self.stop_button.setVisible(False)
         
         if result['success']:
-            # 获取不存在的卡片数量
             nonexistent_count = len(result.get('nonexistent', []))
             summary = (
                 f"下载完成！\n"
-                f"总数：{result['total']}张\n"
-                f"完整下载：{result['complete']}张\n"
-                f"仅normal形态：{result['normal_only']}张\n"
-                f"仅trained形态：{result['trained_only']}张\n"
-                f"下载失败：{result['failed']}张\n"
-                f"不存在的卡片：{nonexistent_count}张"
+                f"总数：{result['total']}个\n"
+                f"成功下载：{result['downloaded']}个\n"
+                f"下载失败：{result['failed']}个\n"
+                f"不存在的视频：{nonexistent_count}个"
             )
             self.add_log_entry("===== 下载完成 =====", True)
             self.add_log_entry(summary, True)
             
-            # 显示不存在的卡片ID列表（最多显示前20个）
             if nonexistent_count > 0:
                 nonexistent_ids = result.get('nonexistent', [])
                 display_ids = nonexistent_ids[:20]
                 id_str = ", ".join(str(id) for id in display_ids)
                 if nonexistent_count > 20:
                     id_str += f"... 等共{nonexistent_count}个ID"
-                self.add_log_entry(f"不存在的卡片ID: {id_str}", False)
+                self.add_log_entry(f"不存在的视频ID: {id_str}", False)
             
             QMessageBox.information(
                 self,
@@ -1533,29 +1396,6 @@ class CardDownloadPage(QWidget):
                 result['message']
             )
 
-    def add_toolbar_actions(self, toolbar):
-        """向工具栏添加动作"""
-        # 下载卡面
-        self.download_action = toolbar.addAction("下载卡面")
-        self.download_action.triggered.connect(self.on_filter_clicked)
-        
-        # 添加刷新动作
-        self.refresh_action = toolbar.addAction("刷新界面")
-        self.refresh_action.triggered.connect(self.on_refresh_clicked)
-    
-    def add_menu_actions(self, menubar):
-        """向菜单栏添加动作"""
-        # 添加帮助菜单
-        help_menu = menubar.addMenu("帮助")
-        
-        # 使用说明
-        usage_action = help_menu.addAction("使用说明")
-        usage_action.triggered.connect(self.show_usage_guide)
-        
-        # 关于
-        about_action = help_menu.addAction("关于")
-        about_action.triggered.connect(self.show_about)
-    
     def show_usage_guide(self):
         """显示使用说明"""
         from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QPushButton
@@ -1563,7 +1403,6 @@ class CardDownloadPage(QWidget):
         from PyQt6.QtCore import Qt
         import os
         
-        # 创建自定义对话框
         dialog = QDialog(self)
         dialog.setWindowTitle("使用说明")
         dialog.setMinimumSize(800, 600)
@@ -1591,48 +1430,38 @@ class CardDownloadPage(QWidget):
             }
         """)
         
-        # 创建主布局
         main_layout = QHBoxLayout(dialog)
         
-        # 左侧图片区域
         left_layout = QVBoxLayout()
         
-        # 加载图片
         image_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'assets', 'images', 'bestdori.jpg')
         if os.path.exists(image_path):
             pixmap = QPixmap(image_path)
             image_label = QLabel()
-            # 缩放图片，最大宽度为240像素，保持比例
             pixmap = pixmap.scaledToWidth(240, Qt.TransformationMode.SmoothTransformation)
             image_label.setPixmap(pixmap)
             image_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
             left_layout.addWidget(image_label)
             left_layout.addStretch()
         
-        # 右侧内容区域
         right_layout = QVBoxLayout()
         
-        # 创建滚动区域，用于显示较长的文本
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
-        # 创建内容容器
         content_container = QWidget()
         content_layout = QVBoxLayout(content_container)
         
-        # 使用全局定义的使用说明文本
         text_label = QLabel(USAGE_TEXT)
         text_label.setWordWrap(True)
         text_label.setTextFormat(Qt.TextFormat.RichText)
         text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         content_layout.addWidget(text_label)
         
-        # 将内容容器设置到滚动区域
         scroll_area.setWidget(content_container)
         right_layout.addWidget(scroll_area)
         
-        # 添加确认按钮
         button_layout = QHBoxLayout()
         ok_button = QPushButton("确认")
         ok_button.clicked.connect(dialog.accept)
@@ -1640,11 +1469,9 @@ class CardDownloadPage(QWidget):
         button_layout.addWidget(ok_button)
         right_layout.addLayout(button_layout)
         
-        # 将左右布局添加到主布局
         main_layout.addLayout(left_layout, 1)
         main_layout.addLayout(right_layout, 3)
         
-        # 显示对话框
         dialog.exec()
     
     def show_about(self):
@@ -1654,7 +1481,6 @@ class CardDownloadPage(QWidget):
         from PyQt6.QtCore import Qt
         import os
         
-        # 创建自定义对话框
         dialog = QDialog(self)
         dialog.setWindowTitle("关于")
         dialog.setMinimumSize(800, 600)
@@ -1682,48 +1508,38 @@ class CardDownloadPage(QWidget):
             }
         """)
         
-        # 创建主布局
         main_layout = QHBoxLayout(dialog)
         
-        # 左侧图片区域
         left_layout = QVBoxLayout()
         
-        # 加载图片
         image_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'assets', 'images', 'bestdori.jpg')
         if os.path.exists(image_path):
             pixmap = QPixmap(image_path)
             image_label = QLabel()
-            # 缩放图片，最大宽度为240像素，保持比例
             pixmap = pixmap.scaledToWidth(240, Qt.TransformationMode.SmoothTransformation)
             image_label.setPixmap(pixmap)
             image_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
             left_layout.addWidget(image_label)
             left_layout.addStretch()
         
-        # 右侧内容区域
         right_layout = QVBoxLayout()
         
-        # 创建滚动区域，用于显示较长的文本
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
-        # 创建内容容器
         content_container = QWidget()
         content_layout = QVBoxLayout(content_container)
         
-        # 使用全局定义的关于文本
         text_label = QLabel(ABOUT_TEXT)
         text_label.setWordWrap(True)
         text_label.setTextFormat(Qt.TextFormat.RichText)
         text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         content_layout.addWidget(text_label)
         
-        # 将内容容器设置到滚动区域
         scroll_area.setWidget(content_container)
         right_layout.addWidget(scroll_area)
         
-        # 添加确认按钮
         button_layout = QHBoxLayout()
         ok_button = QPushButton("确认")
         ok_button.clicked.connect(dialog.accept)
@@ -1731,11 +1547,9 @@ class CardDownloadPage(QWidget):
         button_layout.addWidget(ok_button)
         right_layout.addLayout(button_layout)
         
-        # 将左右布局添加到主布局
         main_layout.addLayout(left_layout, 1)
         main_layout.addLayout(right_layout, 3)
         
-        # 显示对话框
         dialog.exec()
 
     def get_selected_band_ids(self):
@@ -1745,9 +1559,8 @@ class CardDownloadPage(QWidget):
             if id != -1 and checkbox.isChecked():
                 selected_ids.append(id)
         
-        # 如果没有选中任何具体选项或者选中了"全部"选项，表示选择全部
         if not selected_ids or self.band_checkboxes[-1].isChecked():
-            return [-1]  # -1 表示全部
+            return [-1]
             
         return selected_ids
     
@@ -1758,9 +1571,8 @@ class CardDownloadPage(QWidget):
             if id != -1 and checkbox.isChecked():
                 selected_ids.append(id)
         
-        # 如果没有选中任何具体选项或者选中了"全部"选项，表示选择全部
         if not selected_ids or self.instrument_checkboxes[-1].isChecked():
-            return [-1]  # -1 表示全部
+            return [-1]
             
         return selected_ids
     
@@ -1771,9 +1583,8 @@ class CardDownloadPage(QWidget):
             if id != -1 and checkbox.isChecked():
                 selected_ids.append(id)
         
-        # 如果没有选中任何具体选项或者选中了"全部"选项，表示选择全部
         if not selected_ids or self.character_checkboxes[-1].isChecked():
-            return [-1]  # -1 表示全部
+            return [-1]
             
         return selected_ids
     
@@ -1781,21 +1592,16 @@ class CardDownloadPage(QWidget):
         """获取符合筛选条件的角色列表"""
         filtered_characters = []
         
-        # 检查是否使用"全部"选项
         use_all_bands = -1 in band_ids
         use_all_instruments = -1 in instrument_ids
         
         if not use_all_bands and not use_all_instruments:
-            # 筛选乐队和乐器
             filtered_characters = [char for char in self.characters if char['band_id'] in band_ids and char['instrument_id'] in instrument_ids]
         elif not use_all_bands:
-            # 仅筛选乐队
             filtered_characters = [char for char in self.characters if char['band_id'] in band_ids]
         elif not use_all_instruments:
-            # 仅筛选乐器
             filtered_characters = [char for char in self.characters if char['instrument_id'] in instrument_ids]
         else:
-            # 无筛选条件或全部选择
             filtered_characters = self.characters.copy()
                 
         return filtered_characters
@@ -1806,12 +1612,9 @@ class CardDownloadPage(QWidget):
         band_ids = self.get_selected_band_ids()
         instrument_ids = self.get_selected_instrument_ids()
         
-        # 如果选择了"全部"角色或没有选择任何具体角色
         if character_ids == [-1]:
-            # 根据当前的乐队和乐器筛选获取角色列表
             return self.get_filtered_characters(band_ids, instrument_ids)
         
-        # 否则返回明确选中的角色
         result = []
         for char_id in character_ids:
             char = self.get_character_by_id(char_id)
@@ -1831,7 +1634,7 @@ class CardDownloadPage(QWidget):
         """更新路径显示标签"""
         root_path = self.config_manager.get_download_root_path()
         if root_path:
-            self.path_label.setText(f"{root_path}/Bestdori/card/")
+            self.path_label.setText(f"{root_path}/Bestdori/animation/")
             self.path_label.setToolTip(f"根路径: {root_path}")
         else:
             self.path_label.setText("未设置（点击\"设置路径\"按钮设置）")

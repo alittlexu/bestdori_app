@@ -21,6 +21,8 @@ import os
 
 from src.core.voice.voice_downloader import VoiceDownloader
 from src.ui.pages.card_download_page import MenuComboBox  # 复用多选控件
+from src.utils.config_manager import get_config_manager
+from src.utils.path_utils import ensure_download_path
 
 
 class VoiceDownloadThread(QThread):
@@ -71,6 +73,7 @@ class VoiceDownloadPage(QWidget):
         super().__init__(parent)
         self._thread = None
         self._save_dir = None
+        self.config_manager = get_config_manager()
         self._instrument_cats = ['吉他', '贝斯', '鼓', '键盘', '主唱', 'DJ', '小提琴']
         self._bands = []
         self._characters = []
@@ -93,6 +96,29 @@ class VoiceDownloadPage(QWidget):
         self.card_voice_tab.setObjectName("CardVoiceTab")
         tabs.addTab(self.card_voice_tab, "卡面语音获取")
         card_layout = QVBoxLayout(self.card_voice_tab)
+
+        # 路径设置区域
+        path_container = QFrame()
+        path_container.setFrameShape(QFrame.Shape.StyledPanel)
+        path_container.setStyleSheet("background-color: #e8f5e9; border-radius: 5px; padding: 5px;")
+        path_container.setContentsMargins(10, 10, 10, 10)
+        card_layout.addWidget(path_container)
+        
+        path_layout = QHBoxLayout(path_container)
+        path_layout.addWidget(QLabel("下载根路径:"))
+        
+        # 显示当前路径
+        self.path_label = QLabel()
+        self._update_path_label()
+        self.path_label.setStyleSheet("color: #333; padding: 3px;")
+        self.path_label.setWordWrap(True)
+        path_layout.addWidget(self.path_label, 1)
+        
+        # 设置路径按钮
+        self.set_path_button = QPushButton("设置路径")
+        self.set_path_button.setStyleSheet("background-color: #2196F3; color: white; padding: 5px 15px; border-radius: 3px;")
+        self.set_path_button.clicked.connect(self._on_set_path_clicked)
+        path_layout.addWidget(self.set_path_button)
 
         # 筛选区：复用卡页的多选控件
         filter_group = QGroupBox("")
@@ -122,11 +148,6 @@ class VoiceDownloadPage(QWidget):
         filter_layout.addWidget(self.character_select)
 
         filter_layout.addStretch(1)
-        
-        # 选择保存目录按钮
-        self.choose_btn = QPushButton("选择保存目录")
-        self.choose_btn.clicked.connect(self._on_choose_dir)
-        filter_layout.addWidget(self.choose_btn)
         
         # 重置筛选按钮
         self.reset_btn = QPushButton("重置筛选")
@@ -193,14 +214,49 @@ class VoiceDownloadPage(QWidget):
             get_voice_page_styles()
         ))
 
-    def _on_choose_dir(self):
-        directory = QFileDialog.getExistingDirectory(self, "选择保存目录", os.path.expanduser("~/Music"))
-        if directory:
-            self._save_dir = directory
+    def _update_path_label(self):
+        """更新路径显示标签"""
+        root_path = self.config_manager.get_download_root_path()
+        if root_path:
+            self.path_label.setText(f"{root_path}/Bestdori/voice/")
+            self.path_label.setToolTip(f"根路径: {root_path}")
+        else:
+            self.path_label.setText("未设置（点击\"设置路径\"按钮设置）")
+            self.path_label.setToolTip("请设置下载根路径")
+    
+    def _on_set_path_clicked(self):
+        """处理设置路径按钮点击事件"""
+        # 获取当前路径作为默认路径
+        current_path = self.config_manager.get_download_root_path()
+        if not current_path:
+            current_path = os.path.expanduser("~")
+        
+        # 选择目录
+        selected_path = QFileDialog.getExistingDirectory(
+            self,
+            "选择下载根路径",
+            current_path,
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
+        )
+        
+        if selected_path:
+            # 保存路径到配置
+            if self.config_manager.set_download_root_path(selected_path):
+                self._update_path_label()
+                QMessageBox.information(self, "设置成功", f"下载根路径已设置为：\n{selected_path}\n\n下载文件将保存在：\n{selected_path}/Bestdori/")
+            else:
+                QMessageBox.warning(self, "设置失败", "保存路径配置失败，请重试")
 
     def _on_start(self):
-        if not self._save_dir:
-            QMessageBox.warning(self, "提示", "请先选择保存目录")
+        # 检查是否设置了下载根路径
+        try:
+            # 使用新的路径结构：<root>/Bestdori/voice/
+            save_dir = ensure_download_path('voice')
+        except ValueError as e:
+            QMessageBox.warning(self, "路径未设置", f"{str(e)}\n\n请先点击\"设置路径\"按钮设置下载根路径。")
+            return
+        except Exception as e:
+            QMessageBox.critical(self, "路径错误", f"创建下载目录失败: {str(e)}")
             return
 
         # 从筛选结果生成昵称列表
@@ -213,7 +269,7 @@ class VoiceDownloadPage(QWidget):
         mode = "card"  # 先固定使用卡面故事
         to_wav = False
 
-        self._thread = VoiceDownloadThread(nicknames, mode, to_wav, self._save_dir)
+        self._thread = VoiceDownloadThread(nicknames, mode, to_wav, save_dir)
         self._thread.progress_updated.connect(self._on_progress)
         self._thread.status_updated.connect(self._on_status)
         self._thread.download_completed.connect(self._on_completed)

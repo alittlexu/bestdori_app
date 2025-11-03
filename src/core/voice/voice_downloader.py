@@ -5,6 +5,37 @@ import logging
 import requests
 
 
+def sanitize_filename(filename):
+    """清理文件名中的非法字符（Windows文件系统）"""
+    # Windows不允许的字符: < > : " / \ | ? * （包括全角和半角）
+    invalid_chars = '<>:"/\\|?*'
+    # 也替换全角字符
+    fullwidth_chars = {
+        '＜': '<',
+        '＞': '>',
+        '：': ':',
+        '"': '"',
+        '"': '"',
+        '／': '/',
+        '＼': '\\',
+        '｜': '|',
+        '？': '?',
+        '＊': '*'  # 全角星号
+    }
+    # 先将全角字符转换为半角，然后再替换
+    for full, half in fullwidth_chars.items():
+        filename = filename.replace(full, half)
+    # 替换半角非法字符
+    for char in invalid_chars:
+        filename = filename.replace(char, '_')
+    # 移除首尾空格和点
+    filename = filename.strip(' .')
+    # 限制文件名长度（Windows路径限制）
+    if len(filename) > 255:
+        filename = filename[:255]
+    return filename
+
+
 class VoiceDownloader:
     """Bestdori 人物语音下载器（控制台调试版）。
 
@@ -41,6 +72,8 @@ class VoiceDownloader:
         # 角色昵称映射
         self.characters_map = self._load_characters_map()
         self.character_ranges = self._load_character_ranges()
+        # 角色到乐队的映射 (short_key -> band_name)
+        self.character_to_band = self._load_character_to_band()
 
     def _create_session(self):
         session = requests.Session()
@@ -117,6 +150,31 @@ class VoiceDownloader:
             self.logger.error(f"无法加载角色范围 {path}: {e}")
         return mapping
 
+    def _load_character_to_band(self):
+        """从 `characters.json` 加载角色到乐队的映射。
+        返回: { short_key: band_name }
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # src/core
+        path = os.path.join(base_dir, 'voice', 'characters.json')
+        mapping = {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            for k, v in data.items():
+                if k.startswith('_'):
+                    continue
+                # v 格式: [全名, 短名, short_key, 乐队名, ...]
+                try:
+                    short_key = v[2] if len(v) > 2 else None
+                    band_name = v[3] if len(v) > 3 else None
+                    if short_key and band_name:
+                        mapping[short_key] = band_name
+                except Exception:
+                    continue
+        except Exception as e:
+            self.logger.error(f"无法加载角色乐队映射 {path}: {e}")
+        return mapping
+
     def _resolve_nicknames(self, nicknames):
         """将输入昵称列表解析为 short_key 列表（去重、保持顺序）。"""
         resolved = []
@@ -125,17 +183,51 @@ class VoiceDownloader:
             key = (raw or '').strip().lower()
             if not key:
                 continue
+            
+            # 先尝试从映射表查找
             short = self.characters_map.get(key)
+            
+            # 如果映射表中找不到，检查是否本身就是 short_key
+            # 即：如果输入的就是 short_key（如 "aya"），检查它是否在 character_ranges 中
+            if not short:
+                # 检查 key 是否就是一个有效的 short_key
+                if key in self.character_ranges:
+                    short = key
+                    self.logger.debug(f"昵称 '{raw}' 直接作为 short_key 使用")
+                else:
+                    self.logger.warning(f"无法解析昵称: '{raw}' (key: '{key}')")
+                    continue
+            
             if short and short not in seen:
                 seen.add(short)
                 resolved.append(short)
+                self.logger.debug(f"昵称 '{raw}' 解析为 short_key: '{short}'")
+        
         return resolved
 
     def _ensure_save_dir(self, short_key):
-        # 与现有下载目录示例对齐：downloads/voices/<short>/<short>_mp3
-        base = os.path.join(self.save_root_dir, short_key)
-        target = os.path.join(base, f"{short_key}_mp3")
-        os.makedirs(target, exist_ok=True)
+        """确保保存目录存在，创建结构：downloads/voices/<band_name>/<short>/<short>_mp3"""
+        # 获取角色所属乐队
+        band_name = self.character_to_band.get(short_key, 'その他')
+        if not band_name:
+            band_name = 'その他'
+            self.logger.warning(f"角色 {short_key} 未找到乐队信息，使用默认乐队：{band_name}")
+        
+        # 清理乐队名称中的非法字符
+        sanitized_band_name = sanitize_filename(band_name)
+        
+        # 创建目录结构：<save_root>/<band_name>/<short_key>/<short_key>_mp3
+        band_dir = os.path.join(self.save_root_dir, sanitized_band_name)
+        char_dir = os.path.join(band_dir, short_key)
+        target = os.path.join(char_dir, f"{short_key}_mp3")
+        
+        try:
+            os.makedirs(target, exist_ok=True)
+            self.logger.debug(f"创建保存目录: {target}")
+        except Exception as e:
+            self.logger.error(f"创建保存目录失败 {target}: {e}")
+            raise
+        
         return target
 
     def _candidate_voice_urls_from_res(self, server, res_id):
@@ -260,12 +352,18 @@ class VoiceDownloader:
             rng = self.character_ranges.get(short)
             if not rng:
                 if status_callback:
-                    status_callback(f"未找到角色范围: {short}")
+                    status_callback(f"未找到角色范围: {short}，跳过该角色")
+                self.logger.warning(f"未找到角色 {short} 的范围信息")
+                stats['skipped'] += 1
                 continue
             start_id, end_id = rng
             misses = 0
+            found_any = False  # 记录是否找到过任何语音文件
             if status_callback:
                 status_callback(f"开始下载角色语音(卡面派生): {short} | 范围 {start_id}-{end_id}")
+            self.logger.info(f"开始下载角色 {short}，范围: {start_id}-{end_id}")
+            
+            # 优化：如果从开头就连续失败，提前结束（类似 animation_episode_downloader 的逻辑）
             for res_id in range(start_id, end_id + 1):
                 ok = self._try_download_voice_for_res(short, res_id, status_callback=status_callback)
                 finished += 1
@@ -274,13 +372,26 @@ class VoiceDownloader:
                 if ok:
                     stats['downloaded'] += 1
                     misses = 0
+                    found_any = True
+                    self.logger.info(f"角色 {short} 下载成功: res{str(res_id).zfill(6)}.mp3")
                 else:
                     misses += 1
-                    if misses >= max_consecutive_miss:
+                    # 如果从开头就连续失败 max_consecutive_miss 次，判定该角色可能没有语音文件
+                    if not found_any and misses >= max_consecutive_miss:
                         if status_callback:
-                            status_callback(f"{short}: 连续未命中 {misses} 次，提前结束该角色扫描。")
+                            status_callback(f"{short}: 从开头连续未命中 {misses} 次，判定该角色可能没有语音文件，跳过后续扫描")
+                        self.logger.warning(f"角色 {short} 从开头连续失败 {misses} 次，跳过该角色")
+                        break
+                    # 如果找到过文件，然后又连续失败 max_consecutive_miss 次，判定为下载完成
+                    elif found_any and misses >= max_consecutive_miss:
+                        if status_callback:
+                            status_callback(f"{short}: 已找到语音文件，且连续未命中 {misses} 次，判定为下载完成")
+                        self.logger.info(f"角色 {short} 下载完成，连续失败 {misses} 次后停止")
                         break
                 time.sleep(0.08)
+            
+            if not found_any:
+                self.logger.warning(f"角色 {short} 未找到任何语音文件")
 
         if status_callback:
             status_callback("语音下载流程结束。")

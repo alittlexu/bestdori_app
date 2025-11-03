@@ -12,12 +12,13 @@ from .pages.blank_page import BlankPage
 from .pages.card_download_page import CardDownloadPage
 from .pages.card_search_page import CardSearchPage
 from .pages.voice_download_page import VoiceDownloadPage
+from .pages.animation_episode_download_page import AnimationEpisodeDownloadPage
 from .background_manager import BackgroundManager
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Bestdori Card Manager v2.0 - 自适应版本")
+        self.setWindowTitle("Bestdori Card Manager v2.1.0 - 自适应版本")
         # 减小最小尺寸，允许用户将窗口缩小到更小的尺寸
         self.setMinimumSize(800, 600)
         
@@ -139,9 +140,11 @@ class MainWindow(QMainWindow):
         card_refresh_action = QAction(QIcon(os.path.join(self.icon_path, 'refresh.png')), "刷新界面", self)
         card_download_action = QAction(QIcon(os.path.join(self.icon_path, 'download.png')), "下载卡面", self)
         card_search_action = QAction(QIcon(os.path.join(self.icon_path, 'search.png')), "搜索卡面", self)
+        animation_download_action = QAction(QIcon(os.path.join(self.icon_path, 'download.png')), "下载动态卡面", self)
         
         card_fetch_menu.addAction(card_refresh_action)
         card_fetch_menu.addAction(card_download_action)
+        card_fetch_menu.addAction(animation_download_action)
         card_fetch_menu.addAction(card_search_action)
         
         # 创建卡面获取按钮
@@ -374,10 +377,12 @@ class MainWindow(QMainWindow):
         self.card_download_page = CardDownloadPage()
         self.card_search_page = CardSearchPage()
         self.voice_download_page = VoiceDownloadPage()
+        self.animation_episode_download_page = AnimationEpisodeDownloadPage()
         
         # 设置每个页面的大小策略为扩展
         for page in [self.blank_page, self.card_page, self.card_preview_page, 
-                    self.card_download_page, self.card_search_page]:
+                    self.card_download_page, self.card_search_page, 
+                    self.animation_episode_download_page]:
             page.setSizePolicy(
                 QSizePolicy.Policy.Expanding, 
                 QSizePolicy.Policy.Expanding
@@ -389,6 +394,7 @@ class MainWindow(QMainWindow):
         content.addWidget(self.card_download_page)
         content.addWidget(self.card_search_page)
         content.addWidget(self.voice_download_page)
+        content.addWidget(self.animation_episode_download_page)
         
         # 默认显示空白页面
         content.setCurrentWidget(self.blank_page)
@@ -409,6 +415,8 @@ class MainWindow(QMainWindow):
             for action in card_fetch_menu.actions():
                 if action.text() == "下载卡面":
                     action.triggered.connect(self.on_card_download_clicked)
+                elif action.text() == "下载动态卡面":
+                    action.triggered.connect(self.on_animation_download_clicked)
                 elif action.text() == "搜索卡面":
                     action.triggered.connect(self.on_card_search_clicked)
                 elif action.text() == "刷新界面":
@@ -427,6 +435,10 @@ class MainWindow(QMainWindow):
     def on_card_download_clicked(self):
         """卡面下载按钮点击处理"""
         self.content_area.setCurrentWidget(self.card_download_page)
+    
+    def on_animation_download_clicked(self):
+        """动态卡面下载按钮点击处理"""
+        self.content_area.setCurrentWidget(self.animation_episode_download_page)
         
     def on_card_search_clicked(self):
         """卡面搜索按钮点击处理"""
@@ -455,6 +467,7 @@ class MainWindow(QMainWindow):
         self.content_area.removeWidget(self.card_download_page)
         self.content_area.removeWidget(self.card_search_page)
         self.content_area.removeWidget(self.voice_download_page)
+        self.content_area.removeWidget(self.animation_episode_download_page)
         
         # 重新创建页面
         self.card_page = CardPage()
@@ -462,6 +475,7 @@ class MainWindow(QMainWindow):
         self.card_download_page = CardDownloadPage()
         self.card_search_page = CardSearchPage()
         self.voice_download_page = VoiceDownloadPage()
+        self.animation_episode_download_page = AnimationEpisodeDownloadPage()
         
         # 重新添加页面
         self.content_area.addWidget(self.card_page)
@@ -469,6 +483,7 @@ class MainWindow(QMainWindow):
         self.content_area.addWidget(self.card_download_page)
         self.content_area.addWidget(self.card_search_page)
         self.content_area.addWidget(self.voice_download_page)
+        self.content_area.addWidget(self.animation_episode_download_page)
 
     def show_usage_guide(self):
         """显示使用说明"""

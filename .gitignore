@@ -53,4 +53,5 @@ config/config.json
 Thumbs.db
 
 # 项目历史记录（不推送到远程仓库）
-.specstory/history/
+.specstory/
+specstory/
