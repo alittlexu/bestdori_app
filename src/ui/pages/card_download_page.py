@@ -103,7 +103,7 @@ def sanitize_filename(filename):
 ABOUT_TEXT = """
 <h2>BanG Dream! 卡面下载工具</h2>
 
-<p><b>版本:</b> 2.1.0</p>
+<p><b>版本:</b> 2.1.1</p>
 
 <p>本工具用于下载BanG Dream!游戏中的卡面资源，支持按乐队、乐器和角色进行筛选，并自动创建对应的文件夹结构。</p>
 
