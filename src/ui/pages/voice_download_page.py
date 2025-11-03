@@ -510,10 +510,11 @@ class VoiceDownloadPage(QWidget):
         
         if result.get('success'):
             self._update_summary(done=True)
-            QMessageBox.information(self, "完成", "语音下载完成（占位统计）")
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_voice_completion(self, result)
         else:
-            msg = result.get('message', '未知错误')
-            QMessageBox.warning(self, "失败", msg)
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_voice_completion(self, result)
             # 失败时重置进度显示
             self.progress_summary.setText("当前下载任务 (0/0)")
             self._task_index = 0

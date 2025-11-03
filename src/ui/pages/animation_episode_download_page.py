@@ -1718,18 +1718,12 @@ class AnimationEpisodeDownloadPage(QWidget):
                     id_str += f"... 等共{nonexistent_count}个ID"
                 self.add_log_entry(f"不存在的视频ID: {id_str}", False)
             
-            QMessageBox.information(
-                self,
-                "下载完成",
-                summary
-            )
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_animation_completion(self, result)
         else:
             self.add_log_entry(f"===== 下载失败: {result['message']} =====", False)
-            QMessageBox.warning(
-                self,
-                "下载失败",
-                result['message']
-            )
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_animation_completion(self, result)
 
     def show_usage_guide(self):
         """显示使用说明"""

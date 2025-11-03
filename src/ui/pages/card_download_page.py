@@ -1819,18 +1819,12 @@ class CardDownloadPage(QWidget):
                     id_str += f"... 等共{nonexistent_count}个ID"
                 self.add_log_entry(f"不存在的卡片ID: {id_str}", False)
             
-            QMessageBox.information(
-                self,
-                "下载完成",
-                summary
-            )
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_card_completion(self, result)
         else:
             self.add_log_entry(f"===== 下载失败: {result['message']} =====", False)
-            QMessageBox.warning(
-                self,
-                "下载失败",
-                result['message']
-            )
+            from src.ui.components.download_completion_dialog import DownloadCompletionDialog
+            DownloadCompletionDialog.show_card_completion(self, result)
 
     def add_toolbar_actions(self, toolbar):
         """向工具栏添加动作"""

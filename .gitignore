@@ -61,6 +61,8 @@ specstory/
 *.zip
 BanG_Dream_工具箱_v*/
 BanG_Dream_工具箱*.zip
+# 版本发布文件夹和压缩包（所有版本）
+*_v*.*/
 
 # 测试文件
 test_*.py
