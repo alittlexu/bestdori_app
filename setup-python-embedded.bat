@@ -308,31 +308,31 @@ REM ========================================
 echo [步骤 5/5] 配置 Python 环境...
 echo.
 
-REM 修改python311._pth文件以启用site-packages
-REM python311._pth文件格式：每行一个路径，最后一行如果是import site则启用site-packages
-REM 默认情况下，python311._pth中#import site是注释的，需要取消注释
+REM Modify python311._pth to enable site-packages
+REM python311._pth format: one path per line, import site enables site-packages
+REM By default #import site is commented, need to uncomment it
 if exist "python311._pth" (
     copy "python311._pth" "python311._pth.bak" >nul
-    REM 使用PowerShell处理文件，取消注释import site行（如果被注释）
+    REM Use PowerShell to uncomment import site line
     powershell -Command "$content = Get-Content 'python311._pth.bak'; $content = $content -replace '^#import site$', 'import site'; Set-Content 'python311._pth' -Value $content" 2>nul
     if errorlevel 1 (
-        REM 如果PowerShell失败，使用findstr和临时文件处理
+        REM If PowerShell fails, use findstr and temp file
         findstr /v "^#import site$" "python311._pth.bak" > "python311._pth.tmp" 2>nul
         if exist "python311._pth.tmp" (
             move /y "python311._pth.tmp" "python311._pth" >nul
             echo import site >> "python311._pth"
         ) else (
-            REM 最后手段：直接添加import site行
+            REM Last resort: add import site line directly
             (
                 type "python311._pth.bak"
                 echo import site
             ) > "python311._pth"
         )
     )
-    REM 验证是否成功
+    REM Verify success
     findstr /c:"import site" "python311._pth" | findstr /v "^#" >nul 2>&1
     if errorlevel 1 (
-        echo [警告] 可能无法正确启用 site-packages，但将继续尝试安装 pip
+        echo [Warning] May not enable site-packages correctly, will continue to install pip
     )
 )
 
