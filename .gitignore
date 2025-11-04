@@ -25,6 +25,9 @@ venv/
 env/
 ENV/
 
+# Python Embedded (用户本地生成，不提交到git)
+python_embedded/
+
 # IDE
 .idea/
 .vscode/
